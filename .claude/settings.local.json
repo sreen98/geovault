@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(npx expo:*)",
+      "Bash(npx create-expo-app@latest:*)",
+      "Bash(cp -r /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVaultTemp/* /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/)",
+      "Bash(cp /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVaultTemp/.gitignore /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/)",
+      "Bash(rm -rf /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVaultTemp)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/babel.config.*)",
+      "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/postcss.config.*)",
+      "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/node_modules/nativewind/dist/babel*)"
+    ]
+  }
+}
