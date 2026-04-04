@@ -21,6 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
         "GeoVault uses your location to save your current position.",
+      UIBackgroundModes: ["fetch"],
     },
   },
   android: {

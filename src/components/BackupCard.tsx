@@ -4,6 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useBackupStore } from "../stores/backup.store";
 import { usePlacesStore } from "../stores/places.store";
 import { BackupRestoreDialog } from "./BackupRestoreDialog";
+import { StatusDialog } from "./StatusDialog";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { AutoBackupSettings } from "./AutoBackupSettings";
 import { formatRelativeDate } from "../utils/date";
 import { ROUNDNESS, SPACING } from "../constants/theme";
 import { useTheme } from "../contexts/ThemeContext";
@@ -16,15 +19,18 @@ export function BackupCard() {
     lastBackupTime,
     lastBackupPlaceCount,
     backupState,
+    pendingMessage,
     initialize,
     signIn,
     signOut,
     backup,
     restore,
     refreshBackupInfo,
+    clearMessage,
   } = useBackupStore();
   const loadPlaces = usePlacesStore((s) => s.loadPlaces);
   const [showRestore, setShowRestore] = useState(false);
+  const [showSignOut, setShowSignOut] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -43,34 +49,47 @@ export function BackupCard() {
     restore(mode).then(() => loadPlaces());
   };
 
+  const statusDialog = pendingMessage ? (
+    <StatusDialog
+      visible
+      title={pendingMessage.title}
+      message={pendingMessage.message}
+      type={pendingMessage.type}
+      onDismiss={clearMessage}
+    />
+  ) : null;
+
   if (!isSignedIn) {
     return (
-      <Pressable
-        style={[styles.signInCard, { backgroundColor: colors.surfaceCard }]}
-        onPress={signIn}
-        disabled={isBusy}
-        accessibilityRole="button"
-        accessibilityLabel="Sign in with Google for backup"
-      >
-        <View style={styles.signInRow}>
-          <View style={[styles.iconCircle, { backgroundColor: colors.surfaceHighlight }]}>
-            <Ionicons name="cloud-upload-outline" size={22} color={colors.accent} />
+      <>
+        <Pressable
+          style={[styles.signInCard, { backgroundColor: colors.surfaceCard }]}
+          onPress={signIn}
+          disabled={isBusy}
+          accessibilityRole="button"
+          accessibilityLabel="Sign in with Google for backup"
+        >
+          <View style={styles.signInRow}>
+            <View style={[styles.iconCircle, { backgroundColor: colors.surfaceHighlight }]}>
+              <Ionicons name="cloud-upload-outline" size={22} color={colors.accent} />
+            </View>
+            <View style={styles.signInText}>
+              <Text style={[styles.signInTitle, { color: colors.onSurface }]}>
+                Backup to Google Drive
+              </Text>
+              <Text style={[styles.signInSub, { color: colors.onSurfaceVariant }]}>
+                Sign in to enable cloud backup
+              </Text>
+            </View>
+            {isBusy ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={colors.onSurfaceMuted} />
+            )}
           </View>
-          <View style={styles.signInText}>
-            <Text style={[styles.signInTitle, { color: colors.onSurface }]}>
-              Backup to Google Drive
-            </Text>
-            <Text style={[styles.signInSub, { color: colors.onSurfaceVariant }]}>
-              Sign in to enable cloud backup
-            </Text>
-          </View>
-          {isBusy ? (
-            <ActivityIndicator size="small" color={colors.accent} />
-          ) : (
-            <Ionicons name="chevron-forward" size={20} color={colors.onSurfaceMuted} />
-          )}
-        </View>
-      </Pressable>
+        </Pressable>
+        {statusDialog}
+      </>
     );
   }
 
@@ -135,16 +154,35 @@ export function BackupCard() {
         </Pressable>
       </View>
 
+      {/* Auto backup settings */}
+      <AutoBackupSettings />
+
       {/* Sign out */}
-      <Pressable
-        onPress={signOut}
-        disabled={isBusy}
-        accessibilityRole="button"
-        accessibilityLabel="Sign out of Google"
-        style={styles.signOutRow}
-      >
-        <Text style={[styles.signOutText, { color: colors.onSurfaceMuted }]}>Sign Out</Text>
-      </Pressable>
+      <View style={styles.signOutRow}>
+        <Pressable
+          onPress={() => setShowSignOut(true)}
+          disabled={isBusy}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out of Google"
+          style={[styles.signOutBtn, { borderColor: colors.danger }]}
+        >
+          <Ionicons name="log-out-outline" size={16} color={colors.danger} />
+          <Text style={[styles.signOutText, { color: colors.danger }]}>Sign Out</Text>
+        </Pressable>
+      </View>
+
+      <ConfirmDialog
+        visible={showSignOut}
+        title="Sign Out"
+        message="You will need to sign in again to backup or restore your data."
+        confirmLabel="Sign Out"
+        confirmIcon="log-out-outline"
+        onConfirm={() => {
+          setShowSignOut(false);
+          signOut();
+        }}
+        onCancel={() => setShowSignOut(false)}
+      />
 
       <BackupRestoreDialog
         visible={showRestore}
@@ -154,6 +192,7 @@ export function BackupCard() {
         onOverwrite={() => handleRestore("overwrite")}
         onCancel={() => setShowRestore(false)}
       />
+      {statusDialog}
     </View>
   );
 }
@@ -242,12 +281,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   signOutRow: {
-    alignItems: "center",
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
+  },
+  signOutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    paddingVertical: 12,
+    borderRadius: ROUNDNESS.md,
+    borderWidth: 1,
   },
   signOutText: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
   },
 });

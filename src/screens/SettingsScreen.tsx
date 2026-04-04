@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Alert,
   StyleSheet,
   Platform,
   StatusBar,
@@ -21,6 +20,8 @@ import { usePlacesStore } from "../stores/places.store";
 import { SPACING, ROUNDNESS, APP_VERSION } from "../constants/theme";
 import { ImportDialog } from "../components/ImportDialog";
 import { BackupCard } from "../components/BackupCard";
+import { StatusDialog } from "../components/StatusDialog";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { seedDatabase, clearAllPlaces } from "../db/seed-runner";
 
 export function SettingsScreen() {
@@ -37,13 +38,15 @@ export function SettingsScreen() {
     try {
       await ExportService.exportAsJson();
     } catch (_error: unknown) {
-      Alert.alert("Export Failed", "Could not export your data. Please try again.");
+      setStatusMsg({ title: "Export Failed", message: "Could not export your data. Please try again.", type: "error" });
     }
   };
 
   const loadPlaces = usePlacesStore((s) => s.loadPlaces);
 
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<{ title: string; message: string; type: "success" | "error" } | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleImport = (): void => {
     setShowImportDialog(true);
@@ -58,14 +61,14 @@ export function SettingsScreen() {
       if (mode === "overwrite") {
         const count = ExportService.importOverwrite(places);
         loadPlaces();
-        Alert.alert("Import Complete", `Replaced all data with ${count} places.`);
+        setStatusMsg({ title: "Import Complete", message: `Replaced all data with ${count} places.`, type: "success" });
       } else {
         const added = ExportService.importAppend(places);
         loadPlaces();
-        Alert.alert("Import Complete", `Added ${added} new places. Duplicates were skipped.`);
+        setStatusMsg({ title: "Import Complete", message: `Added ${added} new places. Duplicates were skipped.`, type: "success" });
       }
     } catch (_error: unknown) {
-      Alert.alert("Import Failed", "Could not read the file. Make sure it is a valid GeoVault export.");
+      setStatusMsg({ title: "Import Failed", message: "Could not read the file. Make sure it is a valid GeoVault export.", type: "error" });
     }
   };
 
@@ -188,7 +191,7 @@ export function SettingsScreen() {
                   onPress={() => {
                     const count = seedDatabase();
                     loadPlaces();
-                    Alert.alert("Seeded", `Added ${count} places.`);
+                    setStatusMsg({ title: "Seeded", message: `Added ${count} places.`, type: "success" });
                   }}
                   accessibilityRole="button"
                   accessibilityLabel="Seed database"
@@ -200,20 +203,7 @@ export function SettingsScreen() {
 
                 <Pressable
                   style={[styles.actionCard, { backgroundColor: colors.surfaceCard }]}
-                  onPress={() => {
-                    Alert.alert("Clear All", "Delete all places?", [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Clear",
-                        style: "destructive",
-                        onPress: () => {
-                          clearAllPlaces();
-                          loadPlaces();
-                          Alert.alert("Cleared", "All places deleted.");
-                        },
-                      },
-                    ]);
-                  }}
+                  onPress={() => setShowClearConfirm(true)}
                   accessibilityRole="button"
                   accessibilityLabel="Clear all data"
                 >
@@ -238,6 +228,28 @@ export function SettingsScreen() {
         onAppend={() => doImport("append")}
         onOverwrite={() => doImport("overwrite")}
         onCancel={() => setShowImportDialog(false)}
+      />
+      {statusMsg && (
+        <StatusDialog
+          visible
+          title={statusMsg.title}
+          message={statusMsg.message}
+          type={statusMsg.type}
+          onDismiss={() => setStatusMsg(null)}
+        />
+      )}
+      <ConfirmDialog
+        visible={showClearConfirm}
+        title="Clear All Data"
+        message="Delete all saved places? This cannot be undone."
+        confirmLabel="Clear All"
+        onConfirm={() => {
+          setShowClearConfirm(false);
+          clearAllPlaces();
+          loadPlaces();
+          setStatusMsg({ title: "Cleared", message: "All places deleted.", type: "success" });
+        }}
+        onCancel={() => setShowClearConfirm(false)}
       />
     </View>
   );

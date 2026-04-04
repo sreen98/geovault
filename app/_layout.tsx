@@ -1,5 +1,9 @@
 import "../global.css";
+import { defineAutoBackupTask } from "../src/services/auto-backup.service";
 import { Stack } from "expo-router";
+
+// Must be defined at module level before any component renders
+defineAutoBackupTask();
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from 'expo-splash-screen';
 import {

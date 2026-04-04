@@ -1,25 +1,14 @@
-import { View, Text, Pressable, Modal, StyleSheet, Alert } from "react-native";
+import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ROUNDNESS, SPACING } from "../constants/theme";
 import { useTheme } from "../contexts/ThemeContext";
-
-/** Legacy helper — uses system Alert for screens not yet migrated to the modal */
-export function confirmAction(
-  title: string,
-  message: string,
-  onConfirm: () => void
-): void {
-  Alert.alert(title, message, [
-    { text: "Cancel", style: "cancel" },
-    { text: "Confirm", style: "destructive", onPress: onConfirm },
-  ]);
-}
 
 interface ConfirmDialogProps {
   visible: boolean;
   title: string;
   message: string;
   confirmLabel?: string;
+  confirmIcon?: keyof typeof Ionicons.glyphMap;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -29,6 +18,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = "Delete",
+  confirmIcon = "trash-outline",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -88,7 +78,7 @@ export function ConfirmDialog({
               style={[styles.button, { backgroundColor: colors.danger }]}
             >
               <Ionicons
-                name="trash-outline"
+                name={confirmIcon}
                 size={16}
                 color="#FFFFFF"
                 style={styles.buttonIcon}

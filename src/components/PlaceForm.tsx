@@ -8,9 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   StyleSheet,
 } from "react-native";
+import { StatusDialog } from "./StatusDialog";
 import { NewPlace, PlaceCategory, isValidCoordinates } from "../types/place.types";
 import { CATEGORIES, CATEGORY_ICONS, CATEGORY_FIELDS } from "../constants/categories";
 import { TagSelector } from "./TagSelector";
@@ -64,6 +64,7 @@ export function PlaceForm({
   const [sourceUrl, setSourceUrl] = useState(initialValues?.sourceUrl ?? "");
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [parsingUrl, setParsingUrl] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
 
   const updateExtraField = (key: string, value: string): void => {
     setExtraFields((prev) => ({ ...prev, [key]: value }));
@@ -74,10 +75,10 @@ export function PlaceForm({
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "Location access is needed to use this feature. You can enter coordinates manually."
-        );
+        setErrorDialog({
+          title: "Permission Denied",
+          message: "Location access is needed to use this feature. You can enter coordinates manually.",
+        });
         setFetchingLocation(false);
         return;
       }
@@ -87,10 +88,10 @@ export function PlaceForm({
       setLatitude(loc.coords.latitude.toFixed(6));
       setLongitude(loc.coords.longitude.toFixed(6));
     } catch (_error: unknown) {
-      Alert.alert(
-        "Location Error",
-        "Could not retrieve your location. Please enter coordinates manually."
-      );
+      setErrorDialog({
+        title: "Location Error",
+        message: "Could not retrieve your location. Please enter coordinates manually.",
+      });
     } finally {
       setFetchingLocation(false);
     }
@@ -124,10 +125,10 @@ export function PlaceForm({
     if (isNaN(lat) || isNaN(lng)) return;
 
     if (!isValidCoordinates(lat, lng)) {
-      Alert.alert(
-        "Invalid Coordinates",
-        "Latitude must be between -90 and 90, longitude between -180 and 180."
-      );
+      setErrorDialog({
+        title: "Invalid Coordinates",
+        message: "Latitude must be between -90 and 90, longitude between -180 and 180.",
+      });
       return;
     }
 
@@ -438,6 +439,15 @@ export function PlaceForm({
           <Text style={[styles.discardText, { color: colors.onSurfaceVariant }]}>Discard Draft</Text>
         </Pressable>
       </ScrollView>
+      {errorDialog && (
+        <StatusDialog
+          visible
+          title={errorDialog.title}
+          message={errorDialog.message}
+          type="error"
+          onDismiss={() => setErrorDialog(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

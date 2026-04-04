@@ -13,7 +13,8 @@
       "Bash(node:*)",
       "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/babel.config.*)",
       "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/postcss.config.*)",
-      "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/node_modules/nativewind/dist/babel*)"
+      "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/node_modules/nativewind/dist/babel*)",
+      "Bash(sort -t: -k2 -rn)"
     ]
   }
 }
