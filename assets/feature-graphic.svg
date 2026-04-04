@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F1724"/>
+      <stop offset="100%" style="stop-color:#1A2535"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#34D399"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#34D399;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#34D399;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="500" fill="url(#bg)"/>
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.03" stroke="#FFFFFF" stroke-width="1">
+    <line x1="0" y1="100" x2="1024" y2="100"/>
+    <line x1="0" y1="200" x2="1024" y2="200"/>
+    <line x1="0" y1="300" x2="1024" y2="300"/>
+    <line x1="0" y1="400" x2="1024" y2="400"/>
+    <line x1="200" y1="0" x2="200" y2="500"/>
+    <line x1="400" y1="0" x2="400" y2="500"/>
+    <line x1="600" y1="0" x2="600" y2="500"/>
+    <line x1="800" y1="0" x2="800" y2="500"/>
+  </g>
+
+  <!-- Glow behind pin -->
+  <ellipse cx="780" cy="250" rx="150" ry="180" fill="url(#glow)"/>
+
+  <!-- Location pin on the right -->
+  <g transform="translate(780, 220)">
+    <path d="M0,-90 C-49.7,-90 -90,-49.7 -90,0 C-90,49.7 0,120 0,120 C0,120 90,49.7 90,0 C90,-49.7 49.7,-90 0,-90Z" fill="url(#pin)"/>
+    <circle cx="0" cy="-8" r="34" fill="#0F1724"/>
+    <circle cx="0" cy="-8" r="14" fill="#34D399"/>
+  </g>
+
+  <!-- Text on the left -->
+  <text x="80" y="190" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="64" fill="#FFFFFF" letter-spacing="-2">
+    GeoVault
+  </text>
+  <text x="80" y="245" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="22" fill="#8B9AB5">
+    Your private place notebook
+  </text>
+
+  <!-- Feature pills -->
+  <g transform="translate(80, 280)">
+    <rect x="0" y="0" width="130" height="32" rx="16" fill="rgba(52, 211, 153, 0.15)"/>
+    <text x="65" y="21" font-family="system-ui, sans-serif" font-weight="600" font-size="13" fill="#34D399" text-anchor="middle">Offline First</text>
+
+    <rect x="145" y="0" width="150" height="32" rx="16" fill="rgba(37, 99, 235, 0.15)"/>
+    <text x="220" y="21" font-family="system-ui, sans-serif" font-weight="600" font-size="13" fill="#60A5FA" text-anchor="middle">Drive Backup</text>
+
+    <rect x="310" y="0" width="150" height="32" rx="16" fill="rgba(245, 158, 11, 0.15)"/>
+    <text x="385" y="21" font-family="system-ui, sans-serif" font-weight="600" font-size="13" fill="#FBBF24" text-anchor="middle">Instant Search</text>
+  </g>
+
+  <!-- Accent line -->
+  <rect x="80" y="340" width="60" height="3" rx="1.5" fill="#34D399" opacity="0.6"/>
+  <text x="80" y="370" font-family="system-ui, sans-serif" font-weight="400" font-size="15" fill="#5A6A85">
+    Save places. Add context. Find them later.
+  </text>
+</svg>
