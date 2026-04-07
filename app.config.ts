@@ -1,7 +1,4 @@
-import { ExpoConfig, ConfigContext } from "expo/config";
-
-export default ({ config }: ConfigContext): ExpoConfig => ({
-  ...config,
+const config = {
   name: "GeoVault",
   slug: "geovault",
   version: "1.0.0",
@@ -36,6 +33,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     favicon: "./assets/favicon.png",
   },
+  extra: {
+    eas: {
+      projectId: "e9172980-e761-4661-9e6d-0f59386e4738",
+    },
+  },
   plugins: [
     "expo-router",
     "expo-sqlite",
@@ -48,4 +50,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   ],
-});
+};
+
+export default config;
