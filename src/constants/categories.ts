@@ -21,7 +21,7 @@ export const CATEGORY_ICONS: Record<PlaceCategory, keyof typeof Ionicons.glyphMa
   Viewpoint: "eye-outline",
   Shopping: "cart-outline",
   "Fuel/EV": "flash-outline",
-  "W.C": "water-outline",
+  "W.C": "man-outline",
   Other: "ellipsis-horizontal-outline",
 };
 
@@ -66,5 +66,7 @@ export const CATEGORY_FIELDS: Record<PlaceCategory, CategoryField[]> = {
     { key: "cleanliness", label: "Cleanliness", placeholder: "e.g., Clean, Average, Poor" },
     { key: "access", label: "Access", placeholder: "e.g., Free / Paid / Key required" },
   ],
-  Other: [],
+  Other: [
+    { key: "customLabel", label: "Custom Label", placeholder: "e.g., Parking, Temple, Library..." },
+  ],
 };

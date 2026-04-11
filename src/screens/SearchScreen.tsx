@@ -5,7 +5,6 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  Platform,
   StatusBar,
   ActivityIndicator,
 } from "react-native";
@@ -84,7 +83,6 @@ export function SearchScreen() {
               autoCapitalize="none"
               returnKeyType="search"
               clearButtonMode="while-editing"
-              autoFocus
               accessibilityLabel="Search places"
             />
           </View>
@@ -125,6 +123,7 @@ export function SearchScreen() {
           maxToRenderPerBatch={15}
           windowSize={10}
           initialNumToRender={15}
+          keyboardShouldPersistTaps="handled"
         />
       </SafeAreaView>
     </View>
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: SPACING.md,
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+    paddingTop: SPACING.md,
     marginBottom: SPACING.md,
   },
   title: {

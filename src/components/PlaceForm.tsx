@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   StyleSheet,
+  Modal,
 } from "react-native";
 import { StatusDialog } from "./StatusDialog";
 import { NewPlace, PlaceCategory, isValidCoordinates } from "../types/place.types";
@@ -19,7 +20,9 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
-import { parseMapUrl } from "../services/url-parser.service";
+import { parseMapUrl, extractUrl } from "../services/url-parser.service";
+import { openMapsApp } from "../services/map-launcher.service";
+import * as Clipboard from "expo-clipboard";
 
 interface PlaceFormProps {
   initialValues?: Partial<NewPlace>;
@@ -64,6 +67,8 @@ export function PlaceForm({
   const [sourceUrl, setSourceUrl] = useState(initialValues?.sourceUrl ?? "");
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [parsingUrl, setParsingUrl] = useState(false);
+  const [pickingFromMap, setPickingFromMap] = useState(false);
+  const [showMapInstructions, setShowMapInstructions] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
 
   const updateExtraField = (key: string, value: string): void => {
@@ -82,15 +87,27 @@ export function PlaceForm({
         setFetchingLocation(false);
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+
+      let loc: Location.LocationObject | null = null;
+
+      // Try last known position first (instant, avoids first-attempt failure)
+      loc = await Location.getLastKnownPositionAsync();
+
+      if (!loc) {
+        // Fall back to current position with balanced accuracy and timeout
+        loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+        });
+      }
+
       setLatitude(loc.coords.latitude.toFixed(6));
       setLongitude(loc.coords.longitude.toFixed(6));
+      setPickingFromMap(false);
     } catch (_error: unknown) {
       setErrorDialog({
         title: "Location Error",
-        message: "Could not retrieve your location. Please enter coordinates manually.",
+        message: "Could not retrieve your location. Please try again or enter coordinates manually.",
       });
     } finally {
       setFetchingLocation(false);
@@ -106,6 +123,7 @@ export function PlaceForm({
         if (parsed.latitude !== null && parsed.longitude !== null) {
           setLatitude(parsed.latitude.toFixed(6));
           setLongitude(parsed.longitude.toFixed(6));
+          setPickingFromMap(false);
         }
         if (parsed.name && !name) {
           setName(parsed.name);
@@ -118,11 +136,91 @@ export function PlaceForm({
     }
   };
 
-  const handleSave = (): void => {
-    if (!name.trim()) return;
+  const handlePickOnMap = (): void => {
+    setShowMapInstructions(true);
+  };
+
+  const handleOpenMapsApp = (): void => {
+    setShowMapInstructions(false);
+    setPickingFromMap(true);
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
-    if (isNaN(lat) || isNaN(lng)) return;
+    const hasCoords = !isNaN(lat) && !isNaN(lng);
+
+    // Delay opening maps to let the modal fully close first
+    setTimeout(async () => {
+      try {
+        await openMapsApp(hasCoords ? { latitude: lat, longitude: lng } : undefined);
+      } catch (_error: unknown) {
+        setErrorDialog({
+          title: "Could Not Open Maps",
+          message: "No maps application was found on your device. You can enter coordinates manually or paste a map link below.",
+        });
+      }
+    }, 500);
+  };
+
+  const handlePasteFromMaps = async (): Promise<void> => {
+    setParsingUrl(true);
+    try {
+      const clipboardText = await Clipboard.getStringAsync();
+      if (!clipboardText) {
+        setErrorDialog({
+          title: "Clipboard Empty",
+          message: "No text found on your clipboard. In the maps app, tap Share then Copy Link, and try again.",
+        });
+        setParsingUrl(false);
+        return;
+      }
+
+      const url = extractUrl(clipboardText);
+      if (!url) {
+        setErrorDialog({
+          title: "No Map Link Found",
+          message: "The clipboard doesn't contain a maps URL. In the maps app, tap Share then Copy Link, and try again.",
+        });
+        setParsingUrl(false);
+        return;
+      }
+
+      await handleMapLinkChange(url);
+    } catch (_error: unknown) {
+      setErrorDialog({
+        title: "Paste Failed",
+        message: "Could not read from clipboard. Please paste the link manually in the Map Link field below.",
+      });
+    } finally {
+      setParsingUrl(false);
+    }
+  };
+
+  const handleSave = async (): Promise<void> => {
+    if (!name.trim()) return;
+    let lat = parseFloat(latitude);
+    let lng = parseFloat(longitude);
+
+    // If coordinates are missing but we have a map link, try parsing it
+    if ((isNaN(lat) || isNaN(lng)) && sourceUrl.trim()) {
+      try {
+        const parsed = await parseMapUrl(sourceUrl.trim());
+        if (parsed.latitude !== null && parsed.longitude !== null) {
+          lat = parsed.latitude;
+          lng = parsed.longitude;
+          setLatitude(lat.toFixed(6));
+          setLongitude(lng.toFixed(6));
+        }
+      } catch (_error: unknown) {
+        // parsing failed
+      }
+    }
+
+    if (isNaN(lat) || isNaN(lng)) {
+      setErrorDialog({
+        title: "Coordinates Required",
+        message: "Use GPS, pick on map, or paste a valid Google/Apple Maps link to set coordinates.",
+      });
+      return;
+    }
 
     if (!isValidCoordinates(lat, lng)) {
       setErrorDialog({
@@ -150,11 +248,9 @@ export function PlaceForm({
 
   const latNum = parseFloat(latitude);
   const lngNum = parseFloat(longitude);
-  const isValid =
-    name.trim().length > 0 &&
-    !isNaN(latNum) &&
-    !isNaN(lngNum) &&
-    isValidCoordinates(latNum, lngNum);
+  const hasCoordinates = !isNaN(latNum) && !isNaN(lngNum) && isValidCoordinates(latNum, lngNum);
+  const hasMapLink = sourceUrl.trim().length > 0;
+  const isValid = name.trim().length > 0 && (hasCoordinates || hasMapLink);
 
   const categoryFields = CATEGORY_FIELDS[category];
   const showMustOrderAvoid = category === "Dining" || category === "Cafe";
@@ -180,7 +276,7 @@ export function PlaceForm({
 
         {/* Name */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.onSurface }]}>Name</Text>
+          <Text style={[styles.label, { color: colors.onSurface }]}>Name<Text style={{ color: colors.danger }}> *</Text></Text>
           <View style={[styles.inputRow, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}>
             <Ionicons name="business-outline" size={18} color={colors.onSurfaceMuted} style={styles.inputIcon} />
             <TextInput
@@ -256,22 +352,34 @@ export function PlaceForm({
         <View style={styles.fieldGroup}>
           <View style={styles.labelRow}>
             <Text style={[styles.label, { color: colors.onSurface }]}>Coordinates</Text>
-            <Pressable
-              onPress={useCurrentLocation}
-              disabled={fetchingLocation}
-              style={styles.gpsButton}
-              accessibilityRole="button"
-              accessibilityLabel="Use current GPS location"
-            >
-              {fetchingLocation ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <>
-                  <Ionicons name="navigate-outline" size={14} color={colors.primary} />
-                  <Text style={[styles.gpsText, { color: colors.primary }]}>Use GPS</Text>
-                </>
-              )}
-            </Pressable>
+            <View style={styles.coordActions}>
+              <Pressable
+                onPress={handlePickOnMap}
+                style={styles.gpsButton}
+                accessibilityRole="button"
+                accessibilityLabel="Pick location on map"
+              >
+                <Ionicons name="map-outline" size={14} color={colors.accent} />
+                <Text style={[styles.gpsText, { color: colors.accent }]}>Pick on Map</Text>
+              </Pressable>
+              <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
+              <Pressable
+                onPress={useCurrentLocation}
+                disabled={fetchingLocation}
+                style={styles.gpsButton}
+                accessibilityRole="button"
+                accessibilityLabel="Use current GPS location"
+              >
+                {fetchingLocation ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="navigate-outline" size={14} color={colors.primary} />
+                    <Text style={[styles.gpsText, { color: colors.primary }]}>Use GPS</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
           </View>
           <View style={styles.coordRow}>
             <View style={[styles.inputRow, styles.halfInput, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}>
@@ -297,6 +405,29 @@ export function PlaceForm({
               />
             </View>
           </View>
+          {pickingFromMap && (
+            <Pressable
+              onPress={handlePasteFromMaps}
+              disabled={parsingUrl}
+              style={[styles.pasteFromMapsButton, { backgroundColor: colors.accentMuted, borderColor: colors.accent }]}
+              accessibilityRole="button"
+              accessibilityLabel="Paste map link from clipboard"
+            >
+              {parsingUrl ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <>
+                  <Ionicons name="clipboard-outline" size={16} color={colors.accent} />
+                  <View style={styles.pasteTextGroup}>
+                    <Text style={[styles.pasteTitle, { color: colors.accent }]}>Paste from Maps</Text>
+                    <Text style={[styles.pasteHint, { color: colors.onSurfaceVariant }]}>
+                      Copy the link in the maps app, then tap here
+                    </Text>
+                  </View>
+                </>
+              )}
+            </Pressable>
+          )}
         </View>
 
         {/* Map Link */}
@@ -306,7 +437,7 @@ export function PlaceForm({
             <Ionicons name="link-outline" size={18} color={colors.onSurfaceMuted} style={styles.inputIcon} />
             <TextInput
               style={[styles.inputText, { color: colors.onSurface, flex: 1 }]}
-              placeholder="Paste Google Maps URL"
+              placeholder="Paste Google or Apple Maps URL"
               placeholderTextColor={colors.onSurfaceMuted}
               value={sourceUrl}
               onChangeText={handleMapLinkChange}
@@ -448,6 +579,48 @@ export function PlaceForm({
           onDismiss={() => setErrorDialog(null)}
         />
       )}
+      {showMapInstructions && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => setShowMapInstructions(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalDialog, { backgroundColor: colors.surfaceElevated }]}>
+              <View style={[styles.modalIconCircle, { backgroundColor: colors.accentMuted }]}>
+                <Ionicons name="map-outline" size={28} color={colors.accent} />
+              </View>
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+                Pick on Map
+              </Text>
+              <Text style={[styles.modalMessage, { color: colors.onSurfaceVariant }]}>
+                {"1. Find the place in the maps app\n2. Tap the Share button\n3. Tap Copy Link\n4. Come back to GeoVault\n5. Tap Paste from Maps"}
+              </Text>
+              <View style={styles.modalButtonRow}>
+                <Pressable
+                  onPress={() => setShowMapInstructions(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
+                  style={[styles.modalButton, { backgroundColor: colors.surfaceContainerHigh }]}
+                >
+                  <Text style={[styles.modalButtonText, { color: colors.onSurface }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleOpenMapsApp}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open Maps"
+                  style={[styles.modalButton, { backgroundColor: colors.accent }]}
+                >
+                  <Ionicons name="open-outline" size={16} color={colors.white} style={styles.modalButtonIcon} />
+                  <Text style={[styles.modalButtonText, { color: colors.white }]}>Open Maps</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -523,6 +696,37 @@ const styles = StyleSheet.create({
   gpsText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
+  },
+  coordActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  actionDivider: {
+    width: 1,
+    height: 14,
+  },
+  pasteFromMapsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: ROUNDNESS.md,
+    borderWidth: 1,
+  },
+  pasteTextGroup: {
+    flex: 1,
+  },
+  pasteTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  pasteHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
   },
   dropdown: {
     borderRadius: ROUNDNESS.md,
@@ -624,5 +828,61 @@ const styles = StyleSheet.create({
   discardText: {
     fontSize: 15,
     fontFamily: "Inter_500Medium",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SPACING.xl,
+  },
+  modalDialog: {
+    width: "100%",
+    borderRadius: ROUNDNESS.xl,
+    padding: SPACING.lg,
+    alignItems: "center",
+  },
+  modalIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: ROUNDNESS.full,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING.md,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: "Manrope_700Bold",
+    letterSpacing: -0.3,
+    marginBottom: SPACING.sm,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 22,
+    textAlign: "left",
+    marginBottom: SPACING.lg,
+    alignSelf: "stretch",
+  },
+  modalButtonRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: ROUNDNESS.md,
+  },
+  modalButtonIcon: {
+    marginRight: 6,
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
   },
 });

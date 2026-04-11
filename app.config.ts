@@ -10,7 +10,7 @@ const config = {
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#000000",
   },
   ios: {
     bundleIdentifier: "com.geovault.app",
@@ -23,6 +23,7 @@ const config = {
   },
   android: {
     package: "com.geovault.app",
+    versionCode: 5,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
@@ -43,10 +44,12 @@ const config = {
     "expo-sqlite",
     "expo-location",
     "expo-font",
+    "expo-splash-screen",
     [
       "@react-native-google-signin/google-signin",
       {
-        iosUrlScheme: "com.googleusercontent.apps.40136881833-t04bd5amku0eh85s209hhdjke4bhfc3l",
+        iosUrlScheme:
+          "com.googleusercontent.apps.40136881833-t04bd5amku0eh85s209hhdjke4bhfc3l",
       },
     ],
   ],

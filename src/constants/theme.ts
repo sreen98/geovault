@@ -1,15 +1,15 @@
 import { PlaceCategory } from "../types/place.types";
 
 export const DARK_COLORS = {
-  background: "#0F1724",
-  surface: "#141D2B",
-  surfaceCard: "#1A2535",
-  surfaceElevated: "#1E293B",
-  surfaceHighlight: "#243044",
+  background: "#000000",
+  surface: "#0A0A0A",
+  surfaceCard: "#141414",
+  surfaceElevated: "#1A1A1A",
+  surfaceHighlight: "#222222",
 
   onSurface: "#FFFFFF",
-  onSurfaceVariant: "#8B9AB5",
-  onSurfaceMuted: "#5A6A85",
+  onSurfaceVariant: "#9CA3AF",
+  onSurfaceMuted: "#6B7280",
 
   primary: "#2563EB",
   primaryContainer: "#1D4ED8",
@@ -25,18 +25,18 @@ export const DARK_COLORS = {
 
   white: "#FFFFFF",
   black: "#000000",
-  border: "rgba(255, 255, 255, 0.08)",
-  borderLight: "rgba(255, 255, 255, 0.12)",
-  overlay: "rgba(0, 0, 0, 0.5)",
+  border: "rgba(255, 255, 255, 0.10)",
+  borderLight: "rgba(255, 255, 255, 0.14)",
+  overlay: "rgba(0, 0, 0, 0.6)",
 
-  secondary: "#8B9AB5",
-  muted: "#5A6A85",
-  surfaceLowest: "#1A2535",
-  surfaceContainerLow: "#1E293B",
-  surfaceContainer: "#243044",
-  surfaceContainerHigh: "#2D3A4F",
-  surfaceContainerHighest: "#374357",
-  outlineVariant: "rgba(255, 255, 255, 0.12)",
+  secondary: "#9CA3AF",
+  muted: "#6B7280",
+  surfaceLowest: "#141414",
+  surfaceContainerLow: "#1A1A1A",
+  surfaceContainer: "#222222",
+  surfaceContainerHigh: "#2A2A2A",
+  surfaceContainerHighest: "#333333",
+  outlineVariant: "rgba(255, 255, 255, 0.14)",
   tertiary: "#3E5C43",
 } as const;
 

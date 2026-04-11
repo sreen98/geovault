@@ -53,7 +53,16 @@ export async function parseMapUrl(url: string): Promise<ParsedPlace> {
   const resolvedUrl = isShortUrl(url) ? await resolveShortUrl(url) : url;
 
   if (isGoogleMapsUrl(resolvedUrl)) {
-    return parseGoogleMapsUrl(resolvedUrl);
+    const result = parseGoogleMapsUrl(resolvedUrl);
+    // If URL parsing didn't find coordinates, try fetching the page HTML
+    if (result.latitude === null || result.longitude === null) {
+      const htmlResult = await extractCoordsFromHtml(resolvedUrl);
+      if (htmlResult.latitude !== null && htmlResult.longitude !== null) {
+        result.latitude = htmlResult.latitude;
+        result.longitude = htmlResult.longitude;
+      }
+    }
+    return result;
   }
 
   if (isAppleMapsUrl(resolvedUrl)) {
@@ -61,6 +70,36 @@ export async function parseMapUrl(url: string): Promise<ParsedPlace> {
   }
 
   return { name: null, latitude: null, longitude: null, sourceUrl: url };
+}
+
+const HTML_COORD_REGEX = /(-?\d+\.\d{5,})/g;
+
+async function extractCoordsFromHtml(
+  url: string
+): Promise<{ latitude: number | null; longitude: number | null }> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/91.0",
+      },
+    });
+    const html = await response.text();
+    const matches = html.match(HTML_COORD_REGEX);
+    if (matches && matches.length >= 2) {
+      // Find a plausible lat/lng pair (lat: -90 to 90, lng: -180 to 180)
+      for (let i = 0; i < matches.length - 1; i++) {
+        const lat = parseFloat(matches[i]);
+        const lng = parseFloat(matches[i + 1]);
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          return { latitude: lat, longitude: lng };
+        }
+      }
+    }
+    return { latitude: null, longitude: null };
+  } catch (_error: unknown) {
+    return { latitude: null, longitude: null };
+  }
 }
 
 function parseGoogleMapsUrl(url: string): ParsedPlace {

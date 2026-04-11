@@ -14,7 +14,19 @@
       "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/babel.config.*)",
       "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/postcss.config.*)",
       "Bash(ls /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/node_modules/nativewind/dist/babel*)",
-      "Bash(sort -t: -k2 -rn)"
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(npx --yes sharp-cli --help)",
+      "Bash(brew install:*)",
+      "Bash(rsvg-convert -w 512 -h 512 icon.svg -o icon.png)",
+      "Bash(rsvg-convert -w 512 -h 512 adaptive-icon.svg -o adaptive-icon.png)",
+      "Bash(rsvg-convert -w 1024 -h 500 feature-graphic.svg -o feature-graphic.png)",
+      "Bash(eas --version)",
+      "Bash(eas whoami:*)",
+      "Bash(eas build:configure:*)",
+      "Bash(npm --version)",
+      "Bash(npm uninstall:*)",
+      "WebFetch(domain:support.google.com)",
+      "Bash(ls -la /Users/sreenathp/Documents/Mine/otherwork/reactnativeapps/GeoVault/app.*)"
     ]
   }
 }
