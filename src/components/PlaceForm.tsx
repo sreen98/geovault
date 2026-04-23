@@ -120,16 +120,11 @@ export function PlaceForm({
       setParsingUrl(true);
       try {
         const parsed = await parseMapUrl(url);
-        if (parsed.latitude !== null && parsed.longitude !== null) {
-          setLatitude(parsed.latitude.toFixed(6));
-          setLongitude(parsed.longitude.toFixed(6));
-          setPickingFromMap(false);
-        }
         if (parsed.name && !name) {
           setName(parsed.name);
         }
       } catch (_error: unknown) {
-        // URL parsing failed silently, user can enter coords manually
+        // URL parsing failed silently; name can be entered manually
       } finally {
         setParsingUrl(false);
       }
@@ -196,28 +191,13 @@ export function PlaceForm({
 
   const handleSave = async (): Promise<void> => {
     if (!name.trim()) return;
-    let lat = parseFloat(latitude);
-    let lng = parseFloat(longitude);
-
-    // If coordinates are missing but we have a map link, try parsing it
-    if ((isNaN(lat) || isNaN(lng)) && sourceUrl.trim()) {
-      try {
-        const parsed = await parseMapUrl(sourceUrl.trim());
-        if (parsed.latitude !== null && parsed.longitude !== null) {
-          lat = parsed.latitude;
-          lng = parsed.longitude;
-          setLatitude(lat.toFixed(6));
-          setLongitude(lng.toFixed(6));
-        }
-      } catch (_error: unknown) {
-        // parsing failed
-      }
-    }
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
 
     if (isNaN(lat) || isNaN(lng)) {
       setErrorDialog({
         title: "Coordinates Required",
-        message: "Use GPS, pick on map, or paste a valid Google/Apple Maps link to set coordinates.",
+        message: "Use GPS, pick on map, or enter coordinates manually.",
       });
       return;
     }
@@ -354,16 +334,6 @@ export function PlaceForm({
             <Text style={[styles.label, { color: colors.onSurface }]}>Coordinates</Text>
             <View style={styles.coordActions}>
               <Pressable
-                onPress={handlePickOnMap}
-                style={styles.gpsButton}
-                accessibilityRole="button"
-                accessibilityLabel="Pick location on map"
-              >
-                <Ionicons name="map-outline" size={14} color={colors.accent} />
-                <Text style={[styles.gpsText, { color: colors.accent }]}>Pick on Map</Text>
-              </Pressable>
-              <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
-              <Pressable
                 onPress={useCurrentLocation}
                 disabled={fetchingLocation}
                 style={styles.gpsButton}
@@ -405,6 +375,24 @@ export function PlaceForm({
               />
             </View>
           </View>
+        </View>
+
+        {/* Pick on Map */}
+        <View style={styles.fieldGroup}>
+          <Pressable
+            onPress={handlePickOnMap}
+            style={[styles.pickOnMapButton, { backgroundColor: colors.accentMuted, borderColor: colors.accent }]}
+            accessibilityRole="button"
+            accessibilityLabel="Pick location on map"
+          >
+            <Ionicons name="map-outline" size={16} color={colors.accent} />
+            <View style={styles.pasteTextGroup}>
+              <Text style={[styles.pasteTitle, { color: colors.accent }]}>Pick on Map</Text>
+              <Text style={[styles.pasteHint, { color: colors.onSurfaceVariant }]}>
+                Open a maps app to choose the exact location
+              </Text>
+            </View>
+          </Pressable>
           {pickingFromMap && (
             <Pressable
               onPress={handlePasteFromMaps}
@@ -702,15 +690,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: SPACING.sm,
   },
-  actionDivider: {
-    width: 1,
-    height: 14,
-  },
   pasteFromMapsButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
     marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: ROUNDNESS.md,
+    borderWidth: 1,
+  },
+  pickOnMapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: ROUNDNESS.md,
