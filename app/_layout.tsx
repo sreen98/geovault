@@ -100,6 +100,33 @@ function RootLayoutInner() {
             presentation: "modal",
           }}
         />
+        <Stack.Screen
+          name="trip/new"
+          options={{
+            headerShown: false,
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="trip/[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="trip/edit/[id]"
+          options={{
+            headerShown: true,
+            title: "Edit Trip",
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="import"
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack>
     </>
   );

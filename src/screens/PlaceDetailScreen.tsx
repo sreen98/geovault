@@ -12,7 +12,11 @@ import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PlacesRepository } from "../db/places.repository";
+import { TripsRepository } from "../db/trips.repository";
 import { Place, PlaceCategory } from "../types/place.types";
+import { Trip } from "../types/trip.types";
+import { DEFAULT_TRIP_COLOR, DEFAULT_TRIP_ICON } from "../constants/trips";
+import { ShareService } from "../services/share.service";
 import { TagChip } from "../components/TagChip";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { usePlacesStore } from "../stores/places.store";
@@ -24,6 +28,7 @@ import { useTheme } from "../contexts/ThemeContext";
 export function PlaceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [place, setPlace] = useState<Place | null>(null);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [showDelete, setShowDelete] = useState(false);
   const deletePlace = usePlacesStore((s) => s.deletePlace);
   const { colors, isDark } = useTheme();
@@ -33,6 +38,7 @@ export function PlaceDetailScreen() {
     useCallback(() => {
       if (id) {
         setPlace(PlacesRepository.getById(id));
+        setTrips(TripsRepository.getTripsForPlace(id));
       }
     }, [id])
   );
@@ -54,6 +60,15 @@ export function PlaceDetailScreen() {
     setShowDelete(false);
     router.back();
   }, [place, deletePlace]);
+
+  const handleShare = useCallback(async (): Promise<void> => {
+    if (!place) return;
+    try {
+      await ShareService.sharePlace(place);
+    } catch (_error: unknown) {
+      // Share sheet dismissed or unavailable — no action needed.
+    }
+  }, [place]);
 
   if (!place) {
     return (
@@ -80,6 +95,14 @@ export function PlaceDetailScreen() {
           <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
             {place.name}
           </Text>
+          <Pressable
+            onPress={handleShare}
+            accessibilityRole="button"
+            accessibilityLabel="Share place"
+            hitSlop={12}
+          >
+            <Ionicons name="share-outline" size={24} color={colors.onSurface} />
+          </Pressable>
           <Pressable
             onPress={() => router.push(`/place/edit/${place.id}`)}
             accessibilityRole="button"
@@ -145,8 +168,8 @@ export function PlaceDetailScreen() {
           <>
             <View style={styles.block}>
               <View style={styles.labelWithDot}>
-                <View style={[styles.dot, { backgroundColor: colors.success }]} />
-                <Text style={[styles.label, { color: colors.success }]}>
+                <Ionicons name="thumbs-up-outline" size={14} color={colors.onSurfaceVariant} />
+                <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
                   {place.category === "Cafe" ? "Must Try" : "Must Order"}
                 </Text>
               </View>
@@ -163,8 +186,8 @@ export function PlaceDetailScreen() {
           <>
             <View style={styles.block}>
               <View style={styles.labelWithDot}>
-                <View style={[styles.dot, { backgroundColor: colors.danger }]} />
-                <Text style={[styles.label, { color: colors.danger }]}>Avoid</Text>
+                <Ionicons name="thumbs-down-outline" size={14} color={colors.onSurfaceVariant} />
+                <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Avoid</Text>
               </View>
               <Text style={[styles.body, { color: colors.onSurface }]}>
                 {place.noteAvoid}
@@ -206,6 +229,39 @@ export function PlaceDetailScreen() {
                 {place.tags.map((tag) => (
                   <TagChip key={tag} label={tag} size="sm" />
                 ))}
+              </View>
+            </View>
+            <View style={[styles.sep, { backgroundColor: colors.surfaceContainerHigh }]} />
+          </>
+        )}
+
+        {/* Trips */}
+        {trips.length > 0 && (
+          <>
+            <View style={styles.block}>
+              <Text style={[styles.label, { color: colors.onSurfaceMuted }]}>In Trips</Text>
+              <View style={styles.tripWrap}>
+                {trips.map((trip) => {
+                  const tripColor = trip.color || DEFAULT_TRIP_COLOR;
+                  const iconName =
+                    trip.icon && trip.icon in Ionicons.glyphMap
+                      ? (trip.icon as keyof typeof Ionicons.glyphMap)
+                      : DEFAULT_TRIP_ICON;
+                  return (
+                    <Pressable
+                      key={trip.id}
+                      onPress={() => router.push(`/trip/${trip.id}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open trip ${trip.name}`}
+                      style={[styles.tripChip, { backgroundColor: colors.surfaceHighlight, borderColor: tripColor }]}
+                    >
+                      <Ionicons name={iconName} size={14} color={tripColor} />
+                      <Text style={[styles.tripChipText, { color: colors.onSurface }]} numberOfLines={1}>
+                        {trip.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
             <View style={[styles.sep, { backgroundColor: colors.surfaceContainerHigh }]} />
@@ -365,6 +421,26 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginTop: SPACING.sm,
+  },
+  tripWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: SPACING.sm,
+  },
+  tripChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: ROUNDNESS.full,
+    borderWidth: 1,
+  },
+  tripChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    maxWidth: 160,
   },
   meta: {
     paddingHorizontal: SPACING.lg,

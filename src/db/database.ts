@@ -1,5 +1,10 @@
 import * as SQLite from "expo-sqlite";
-import { MIGRATION_V1, MIGRATION_V2, MIGRATION_V3_STEPS } from "./migrations";
+import {
+  MIGRATION_V1,
+  MIGRATION_V2,
+  MIGRATION_V3_STEPS,
+  MIGRATION_V4_STEPS,
+} from "./migrations";
 
 const DB_NAME = "geovault.db";
 
@@ -34,5 +39,11 @@ function runMigrations(database: SQLite.SQLiteDatabase) {
       database.execSync(step);
     }
     database.execSync("PRAGMA user_version = 3");
+  }
+  if (currentVersion < 4) {
+    for (const step of MIGRATION_V4_STEPS) {
+      database.execSync(step);
+    }
+    database.execSync("PRAGMA user_version = 4");
   }
 }

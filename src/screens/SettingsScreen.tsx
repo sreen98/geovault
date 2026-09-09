@@ -10,13 +10,16 @@ import {
   Switch,
   Linking,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
 import { ExportService } from "../services/export.service";
+import { decodeImportData, extractImportToken } from "../services/share.service";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSettingsStore } from "../stores/settings.store";
 import { usePlacesStore } from "../stores/places.store";
+import { useTripsStore } from "../stores/trips.store";
 import { SPACING, ROUNDNESS, APP_VERSION } from "../constants/theme";
 import { ImportDialog } from "../components/ImportDialog";
 import { BackupCard } from "../components/BackupCard";
@@ -43,6 +46,7 @@ export function SettingsScreen() {
   };
 
   const loadPlaces = usePlacesStore((s) => s.loadPlaces);
+  const loadTrips = useTripsStore((s) => s.loadTrips);
 
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ title: string; message: string; type: "success" | "error" } | null>(null);
@@ -55,20 +59,47 @@ export function SettingsScreen() {
   const doImport = async (mode: "overwrite" | "append"): Promise<void> => {
     setShowImportDialog(false);
     try {
-      const places = await ExportService.pickAndReadFile();
-      if (!places) return;
+      const data = await ExportService.pickAndReadFile();
+      if (!data) return;
 
       if (mode === "overwrite") {
-        const count = ExportService.importOverwrite(places);
+        const count = ExportService.importOverwrite(data);
         loadPlaces();
+        loadTrips();
         setStatusMsg({ title: "Import Complete", message: `Replaced all data with ${count} places.`, type: "success" });
       } else {
-        const added = ExportService.importAppend(places);
+        const added = ExportService.importAppend(data);
         loadPlaces();
+        loadTrips();
         setStatusMsg({ title: "Import Complete", message: `Added ${added} new places. Duplicates were skipped.`, type: "success" });
       }
     } catch (_error: unknown) {
       setStatusMsg({ title: "Import Failed", message: "Could not read the file. Make sure it is a valid GeoVault export.", type: "error" });
+    }
+  };
+
+  const handleImportFromClipboard = async (): Promise<void> => {
+    try {
+      const text = await Clipboard.getStringAsync();
+      const payload = decodeImportData(text ?? "");
+      if (!payload) {
+        setStatusMsg({
+          title: "No Shared Link Found",
+          message: "Copy the shared GeoVault link (or message) first, then tap this again.",
+          type: "error",
+        });
+        return;
+      }
+      const token = extractImportToken(text ?? "");
+      if (token) {
+        router.push({ pathname: "/import", params: { d: token } });
+      }
+    } catch (_error: unknown) {
+      setStatusMsg({
+        title: "Import Failed",
+        message: "Could not read from the clipboard. Please try again.",
+        type: "error",
+      });
     }
   };
 
@@ -132,6 +163,24 @@ export function SettingsScreen() {
                 <Text style={[styles.actionCardSubtitle, { color: colors.onSurfaceVariant }]}>Restore data</Text>
               </Pressable>
             </View>
+
+            <Pressable
+              style={[styles.card, { backgroundColor: colors.surfaceCard, marginTop: SPACING.sm }]}
+              onPress={handleImportFromClipboard}
+              accessibilityRole="button"
+              accessibilityLabel="Import shared link from clipboard"
+            >
+              <View style={styles.rowItem}>
+                <Ionicons name="clipboard-outline" size={22} color={colors.onSurfaceVariant} style={styles.prefIcon} />
+                <View style={styles.rowTextContainer}>
+                  <Text style={[styles.rowTitle, { color: colors.onSurface }]}>Import Shared Link</Text>
+                  <Text style={[styles.rowSubtitle, { color: colors.onSurfaceVariant }]}>
+                    Paste a trip or place someone shared with you
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.onSurfaceMuted} />
+              </View>
+            </Pressable>
           </View>
 
           {/* Preferences */}

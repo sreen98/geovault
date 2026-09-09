@@ -22,6 +22,38 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+export function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+// Human-readable range for a trip. Handles either bound being absent.
+export function formatDateRange(
+  start: string | null,
+  end: string | null
+): string {
+  if (start && end) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const sameYear = startDate.getFullYear() === endDate.getFullYear();
+    const endLabel = end
+      ? endDate.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "";
+    const startLabel = sameYear ? formatShortDate(start) : formatDate(start);
+    return `${startLabel} - ${endLabel}`;
+  }
+  if (start) return `From ${formatDate(start)}`;
+  if (end) return `Until ${formatDate(end)}`;
+  return "";
+}
+
 export function formatRelativeDate(iso: string): string {
   const now = new Date();
   const then = new Date(iso);

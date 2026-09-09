@@ -123,8 +123,20 @@ export function PlaceForm({
         if (parsed.name && !name) {
           setName(parsed.name);
         }
+        if (parsed.location && !location) {
+          setLocation(parsed.location);
+        }
+        if (
+          parsed.latitude !== null &&
+          parsed.longitude !== null &&
+          !latitude &&
+          !longitude
+        ) {
+          setLatitude(parsed.latitude.toFixed(6));
+          setLongitude(parsed.longitude.toFixed(6));
+        }
       } catch (_error: unknown) {
-        // URL parsing failed silently; name can be entered manually
+        // URL parsing failed silently; details can be entered manually
       } finally {
         setParsingUrl(false);
       }
@@ -193,16 +205,19 @@ export function PlaceForm({
     if (!name.trim()) return;
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
+    const hasCoords = !isNaN(lat) && !isNaN(lng);
+    const hasLink = sourceUrl.trim().length > 0;
 
-    if (isNaN(lat) || isNaN(lng)) {
+    // A place needs either a map link or coordinates — not both.
+    if (!hasCoords && !hasLink) {
       setErrorDialog({
-        title: "Coordinates Required",
-        message: "Use GPS, pick on map, or enter coordinates manually.",
+        title: "Location Required",
+        message: "Paste a map link, pick on map, or enter coordinates.",
       });
       return;
     }
 
-    if (!isValidCoordinates(lat, lng)) {
+    if (hasCoords && !isValidCoordinates(lat, lng)) {
       setErrorDialog({
         title: "Invalid Coordinates",
         message: "Latitude must be between -90 and 90, longitude between -180 and 180.",
@@ -213,8 +228,8 @@ export function PlaceForm({
     onSave({
       name: name.trim(),
       location: location.trim(),
-      latitude: lat,
-      longitude: lng,
+      latitude: hasCoords ? lat : 0,
+      longitude: hasCoords ? lng : 0,
       category,
       tags,
       noteMustOrder: noteMustOrder.trim(),
@@ -328,6 +343,69 @@ export function PlaceForm({
           )}
         </View>
 
+        {/* Map Link */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.label, { color: colors.onSurface }]}>Map Link</Text>
+          <View style={[styles.inputRow, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}>
+            <Ionicons name="link-outline" size={18} color={colors.onSurfaceMuted} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.inputText, { color: colors.onSurface, flex: 1 }]}
+              placeholder="Paste Google or Apple Maps URL"
+              placeholderTextColor={colors.onSurfaceMuted}
+              value={sourceUrl}
+              onChangeText={handleMapLinkChange}
+              autoCapitalize="none"
+              keyboardType="url"
+              accessibilityLabel="Map link"
+            />
+            {parsingUrl && <ActivityIndicator size="small" color={colors.accent} />}
+          </View>
+          <Text style={[styles.pasteHint, { color: colors.onSurfaceMuted, marginTop: SPACING.xs }]}>
+            A map link is enough — coordinates fill in automatically. Or add them below.
+          </Text>
+        </View>
+
+        {/* Pick on Map */}
+        <View style={styles.fieldGroup}>
+          <Pressable
+            onPress={handlePickOnMap}
+            style={[styles.pickOnMapButton, { backgroundColor: colors.accentMuted, borderColor: colors.accent }]}
+            accessibilityRole="button"
+            accessibilityLabel="Pick location on map"
+          >
+            <Ionicons name="map-outline" size={16} color={colors.accent} />
+            <View style={styles.pasteTextGroup}>
+              <Text style={[styles.pasteTitle, { color: colors.accent }]}>Pick on Map</Text>
+              <Text style={[styles.pasteHint, { color: colors.onSurfaceVariant }]}>
+                Open a maps app to choose the exact location
+              </Text>
+            </View>
+          </Pressable>
+          {pickingFromMap && (
+            <Pressable
+              onPress={handlePasteFromMaps}
+              disabled={parsingUrl}
+              style={[styles.pasteFromMapsButton, { backgroundColor: colors.accentMuted, borderColor: colors.accent }]}
+              accessibilityRole="button"
+              accessibilityLabel="Paste map link from clipboard"
+            >
+              {parsingUrl ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <>
+                  <Ionicons name="clipboard-outline" size={16} color={colors.accent} />
+                  <View style={styles.pasteTextGroup}>
+                    <Text style={[styles.pasteTitle, { color: colors.accent }]}>Paste from Maps</Text>
+                    <Text style={[styles.pasteHint, { color: colors.onSurfaceVariant }]}>
+                      Copy the link in the maps app, then tap here
+                    </Text>
+                  </View>
+                </>
+              )}
+            </Pressable>
+          )}
+        </View>
+
         {/* Coordinates */}
         <View style={styles.fieldGroup}>
           <View style={styles.labelRow}>
@@ -377,81 +455,21 @@ export function PlaceForm({
           </View>
         </View>
 
-        {/* Pick on Map */}
-        <View style={styles.fieldGroup}>
-          <Pressable
-            onPress={handlePickOnMap}
-            style={[styles.pickOnMapButton, { backgroundColor: colors.accentMuted, borderColor: colors.accent }]}
-            accessibilityRole="button"
-            accessibilityLabel="Pick location on map"
-          >
-            <Ionicons name="map-outline" size={16} color={colors.accent} />
-            <View style={styles.pasteTextGroup}>
-              <Text style={[styles.pasteTitle, { color: colors.accent }]}>Pick on Map</Text>
-              <Text style={[styles.pasteHint, { color: colors.onSurfaceVariant }]}>
-                Open a maps app to choose the exact location
-              </Text>
-            </View>
-          </Pressable>
-          {pickingFromMap && (
-            <Pressable
-              onPress={handlePasteFromMaps}
-              disabled={parsingUrl}
-              style={[styles.pasteFromMapsButton, { backgroundColor: colors.accentMuted, borderColor: colors.accent }]}
-              accessibilityRole="button"
-              accessibilityLabel="Paste map link from clipboard"
-            >
-              {parsingUrl ? (
-                <ActivityIndicator size="small" color={colors.accent} />
-              ) : (
-                <>
-                  <Ionicons name="clipboard-outline" size={16} color={colors.accent} />
-                  <View style={styles.pasteTextGroup}>
-                    <Text style={[styles.pasteTitle, { color: colors.accent }]}>Paste from Maps</Text>
-                    <Text style={[styles.pasteHint, { color: colors.onSurfaceVariant }]}>
-                      Copy the link in the maps app, then tap here
-                    </Text>
-                  </View>
-                </>
-              )}
-            </Pressable>
-          )}
-        </View>
-
-        {/* Map Link */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.onSurface }]}>Map Link</Text>
-          <View style={[styles.inputRow, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}>
-            <Ionicons name="link-outline" size={18} color={colors.onSurfaceMuted} style={styles.inputIcon} />
-            <TextInput
-              style={[styles.inputText, { color: colors.onSurface, flex: 1 }]}
-              placeholder="Paste Google or Apple Maps URL"
-              placeholderTextColor={colors.onSurfaceMuted}
-              value={sourceUrl}
-              onChangeText={handleMapLinkChange}
-              autoCapitalize="none"
-              keyboardType="url"
-              accessibilityLabel="Map link"
-            />
-            {parsingUrl && <ActivityIndicator size="small" color={colors.accent} />}
-          </View>
-        </View>
-
         {/* Tags */}
         <TagSelector selectedTags={tags} onChange={setTags} />
 
         {/* Category-specific fields */}
         {showMustOrderAvoid && (
           <View style={styles.fieldGroup}>
-            <View style={[styles.noteCard, { backgroundColor: colors.successMuted, borderColor: colors.success }]}>
+            <View style={[styles.noteCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}>
               <View style={styles.noteCardHeader}>
-                <Ionicons name="heart" size={16} color={colors.success} />
-                <Text style={[styles.noteCardLabel, { color: colors.success }]}>
+                <Ionicons name="thumbs-up-outline" size={16} color={colors.onSurfaceVariant} />
+                <Text style={[styles.noteCardLabel, { color: colors.onSurfaceVariant }]}>
                   {category === "Cafe" ? "MUST TRY" : "MUST ORDER"}
                 </Text>
               </View>
               <TextInput
-                style={[styles.noteInput, { backgroundColor: colors.surfaceCard, color: colors.onSurface }]}
+                style={[styles.noteInput, { backgroundColor: colors.surfaceElevated, color: colors.onSurface }]}
                 placeholder={category === "Cafe" ? "Signature drinks or pastries..." : "Dishes or drinks worth returning for..."}
                 placeholderTextColor={colors.onSurfaceMuted}
                 value={noteMustOrder}
@@ -461,13 +479,13 @@ export function PlaceForm({
               />
             </View>
 
-            <View style={[styles.noteCard, { backgroundColor: colors.dangerMuted, borderColor: colors.danger, marginTop: SPACING.md }]}>
+            <View style={[styles.noteCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border, marginTop: SPACING.md }]}>
               <View style={styles.noteCardHeader}>
-                <Ionicons name="warning" size={16} color={colors.danger} />
-                <Text style={[styles.noteCardLabel, { color: colors.danger }]}>AVOID</Text>
+                <Ionicons name="thumbs-down-outline" size={16} color={colors.onSurfaceVariant} />
+                <Text style={[styles.noteCardLabel, { color: colors.onSurfaceVariant }]}>AVOID</Text>
               </View>
               <TextInput
-                style={[styles.noteInput, { backgroundColor: colors.surfaceCard, color: colors.onSurface }]}
+                style={[styles.noteInput, { backgroundColor: colors.surfaceElevated, color: colors.onSurface }]}
                 placeholder="Dishes or times to skip..."
                 placeholderTextColor={colors.onSurfaceMuted}
                 value={noteAvoid}

@@ -93,6 +93,21 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="trips"
+        options={{
+          title: "Trips",
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            <TabIcon
+              name={focused ? "map" : "map-outline"}
+              color={color}
+              size={24}
+              focused={focused}
+              accentColor={colors.accent}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="search"
         options={{
           title: "Search",

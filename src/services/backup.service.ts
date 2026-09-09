@@ -1,6 +1,10 @@
 import { GoogleAuthService } from "./google-auth.service";
 import { GoogleDriveService } from "./google-drive.service";
-import { buildExportJson, parseImportFile } from "./export.service";
+import {
+  buildExportJson,
+  parseImportFile,
+  ExportService,
+} from "./export.service";
 import { PlacesRepository } from "../db/places.repository";
 import { BackupInfo } from "../types/backup.types";
 
@@ -49,8 +53,8 @@ export const BackupService = {
     );
     let placeCount = 0;
     try {
-      const places = parseImportFile(content);
-      placeCount = places.length;
+      const parsed = parseImportFile(content);
+      placeCount = parsed.places.length;
     } catch (_error: unknown) {
       // Corrupted file, still return metadata
     }
@@ -77,13 +81,13 @@ export const BackupService = {
       accessToken,
       files[0].id
     );
-    const places = parseImportFile(content);
+    const parsed = parseImportFile(content);
 
     if (mode === "overwrite") {
-      PlacesRepository.importAll(places);
-      return { placeCount: places.length };
+      const placeCount = ExportService.importOverwrite(parsed);
+      return { placeCount };
     } else {
-      const added = PlacesRepository.appendAll(places);
+      const added = ExportService.importAppend(parsed);
       return { placeCount: added };
     }
   },
