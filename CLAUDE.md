@@ -11,6 +11,7 @@ GeoVault is a privacy-first, zero-backend personal location notebook built with 
 - **State:** Zustand
 - **Auth:** @react-native-google-signin/google-signin (Google Drive backup)
 - **Background Tasks:** expo-background-fetch + expo-task-manager (auto-backup)
+- **Gestures:** react-native-gesture-handler + react-native-reorderable-list (drag-to-reorder)
 - **Language:** TypeScript (strict mode, no `any` types)
 
 ## Architecture
@@ -21,10 +22,12 @@ All features must work client-side only. Never suggest server-side components, h
 ### Directory Structure
 ```
 app/                    # expo-router screens (file-based routing)
-  (tabs)/               # Bottom tab navigator (Places, Search, Settings)
+  (tabs)/               # Bottom tab navigator (Places, Search, Collections, Settings)
   place/                # Place CRUD screens ([id], new, edit/[id])
+  collection/           # Collection screens ([id], new, edit/[id])
 src/
   db/                   # SQLite database layer (database, migrations, repositories, seed)
+                        # restore.repository.ts owns whole-database import (one transaction)
   services/             # Business logic
     url-parser.service.ts       # Google/Apple Maps URL parsing
     export.service.ts           # JSON export/import
@@ -34,6 +37,7 @@ src/
     auto-backup.service.ts      # Background fetch task registration
   stores/               # Zustand state stores
     places.store.ts             # Places with pagination (PAGE_SIZE=30)
+    collections.store.ts        # Collections + open collection's paginated places
     search.store.ts             # Search with pagination
     settings.store.ts           # Theme, auto-backup preferences
     backup.store.ts             # Google Drive backup state
@@ -45,14 +49,35 @@ src/
 
 ### Database
 - SQLite with WAL mode and FTS5 virtual table for search
-- Migrations are version-based using `PRAGMA user_version` (currently v3)
+- Migrations are version-based using `PRAGMA user_version` (currently v4)
 - Tags stored as JSON arrays in a TEXT column, indexed by FTS5
 - Three separate note columns (must_order, avoid, general) for direct queryability
 - FTS5 indexes: name, location, tags, notes, category
 - Paginated queries via `getPaginated(limit, offset, filters)`
+- `collections` + `collection_places` (v4) group places many-to-many, ordered by `position`
+- `ON DELETE CASCADE` on both membership columns — deleting a place or collection needs no cleanup code
 
 ### State Management
 Zustand stores are thin caches over SQLite. Places and search use pagination (30 items per page) with infinite scroll. Backup store is the exception — it handles async Google API calls with loading states.
+
+### Collections
+- A place can belong to any number of collections; membership lives in `collection_places`
+- Deleting a collection never deletes its places, and vice versa — the copy in every confirm dialog says so
+- Manual ordering via drag-and-drop in a "Reorder" mode, using `ReorderableList`
+- `useReorderableDrag()` only works inside a `ReorderableList` cell, so the detail screen always
+  renders `ReorderableList` and toggles `dragEnabled` — it never swaps back to a plain `FlatList`
+- `ReorderableList` omits `removeClippedSubviews` from its props; do not pass it
+- Reorder writes are optimistic: state updates first, `setPlaceOrder` persists after, and the
+  database is not re-read (that would snap the row back mid-animation)
+- Dragging is pointer-only, so rows also expose "Move up"/"Move down" accessibility actions
+- Collections search by `LIKE` on name/description, not FTS5 — the row count is small
+
+### Export / Backup Format
+- Export is **version 2**: adds a `collections` array, each carrying its membership as `placeIds` in order
+- A v1 file (places only) still imports; a v2 file still opens in an older build, which reads only `places`
+- `parsePlaceExports` / `parseCollectionExports` repair or skip malformed records rather than failing the restore
+- Import runs in a single transaction — a failure part-way leaves the existing data untouched
+- An import whose records are all unusable is refused, so an empty file cannot silently wipe the vault
 
 ### Google Drive Backup
 - Uses `appDataFolder` (hidden, app-specific, non-sensitive scope)
@@ -115,12 +140,17 @@ node node_modules/typescript/bin/tsc --noEmit   # Type check
 npx expo export --platform ios                  # Test production bundle
 ```
 
-**Important:** Google Sign-In and Background Fetch require development builds (`run:android`/`run:ios`). They do NOT work with Expo Go or `npx expo start`.
+**Important:** Google Sign-In, Background Fetch and Gesture Handler require development builds (`run:android`/`run:ios`). They do NOT work with Expo Go or `npx expo start`. Adding a native module means rebuilding the dev build — a JS reload is not enough.
+
+`app/_layout.tsx` wraps the whole app in `GestureHandlerRootView`; gesture-based UI breaks silently without it.
 
 ## Key Files
 - `src/db/database.ts` — SQLite singleton, migrations, all features depend on this
 - `src/db/places.repository.ts` — All place CRUD + FTS5 search + pagination
+- `src/db/collections.repository.ts` — Collection CRUD, membership, ordering, search
+- `src/db/restore.repository.ts` — Transactional overwrite/append used by both import and Drive restore
 - `src/types/place.types.ts` — Core data interfaces + validation helpers
+- `src/types/collection.types.ts` — Collection interfaces + defensive export parsing
 - `src/types/backup.types.ts` — Backup state and Drive file metadata types
 - `src/services/google-auth.service.ts` — Google Sign-In (configure, signIn, getAccessToken)
 - `src/services/google-drive.service.ts` — Drive REST API (upload, download, list, delete)
@@ -151,6 +181,6 @@ OAuth consent screen scope: `https://www.googleapis.com/auth/drive.appdata`
 ## Dev Tools
 In development (`__DEV__`), Settings shows a "DEV TOOLS" section with:
 - **Seed Data** — adds 100 test places across all categories
-- **Clear All** — deletes all places (with confirmation)
+- **Clear All** — deletes all places and collections (with confirmation)
 
 Seed data is in `src/db/seed.ts` and only runs when manually triggered.

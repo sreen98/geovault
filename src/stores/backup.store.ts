@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { BackupInfo, BackupState } from "../types/backup.types";
 import { GoogleAuthService } from "../services/google-auth.service";
 import { BackupService } from "../services/backup.service";
+import { pluralize } from "../utils/plural";
 
 interface MessageInfo {
   title: string;
@@ -92,7 +93,7 @@ export const useBackupStore = create<BackupStoreState>((set) => ({
         backupState: "idle",
         pendingMessage: {
           title: "Backup Complete",
-          message: `${info.placeCount} places backed up to Google Drive.`,
+          message: `${pluralize(info.placeCount, "place")} backed up to Google Drive.`,
           type: "success",
         },
       });
@@ -112,10 +113,14 @@ export const useBackupStore = create<BackupStoreState>((set) => ({
     set({ backupState: "restoring" });
     try {
       const result = await BackupService.performRestore(mode);
+      const collectionPart =
+        result.collectionCount > 0
+          ? ` and ${pluralize(result.collectionCount, "collection")}`
+          : "";
       const message =
         mode === "overwrite"
-          ? `Restored ${result.placeCount} places from backup.`
-          : `Added ${result.placeCount} new places from backup.`;
+          ? `Restored ${pluralize(result.placeCount, "place")}${collectionPart} from backup.`
+          : `Added ${pluralize(result.placeCount, "new place", "new places")}${collectionPart} from backup.`;
       set({
         backupState: "idle",
         pendingMessage: { title: "Restore Complete", message, type: "success" },

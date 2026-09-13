@@ -108,3 +108,105 @@ export function rowToPlace(row: PlaceRow): Place {
 export function isValidCoordinates(lat: number, lng: number): boolean {
   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
+
+function readString(source: Record<string, unknown>, key: string): string {
+  const value = source[key];
+  return typeof value === "string" ? value : "";
+}
+
+function readFiniteNumber(
+  source: Record<string, unknown>,
+  key: string
+): number | null {
+  const value = source[key];
+  if (typeof value === "number" && isFinite(value)) return value;
+  // Coordinates written by a hand-edited file may arrive as strings.
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function readStringRecord(
+  source: Record<string, unknown>,
+  key: string
+): Record<string, string> {
+  const value = source[key];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  const result: Record<string, string> = {};
+  for (const [entryKey, entryValue] of Object.entries(
+    value as Record<string, unknown>
+  )) {
+    if (typeof entryValue === "string") {
+      result[entryKey] = entryValue;
+    }
+  }
+  return result;
+}
+
+/**
+ * Parses the `places` array of an export file defensively. Entries that could
+ * not be stored at all — no id, no name, or unusable coordinates — are skipped
+ * so one malformed record cannot abort an otherwise good restore. Everything
+ * else falls back to a safe default.
+ */
+export function parsePlaceExports(value: unknown): Place[] {
+  if (!Array.isArray(value)) return [];
+
+  const result: Place[] = [];
+  const seenIds = new Set<string>();
+
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      continue;
+    }
+    const source = entry as Record<string, unknown>;
+
+    const id = readString(source, "id").trim();
+    const name = readString(source, "name").trim();
+    if (!id || !name) continue;
+    if (seenIds.has(id)) continue;
+
+    const latitude = readFiniteNumber(source, "latitude");
+    const longitude = readFiniteNumber(source, "longitude");
+    if (latitude === null || longitude === null) continue;
+    if (!isValidCoordinates(latitude, longitude)) continue;
+
+    seenIds.add(id);
+
+    const category = readString(source, "category");
+    const createdAt = readString(source, "createdAt");
+    const updatedAt = readString(source, "updatedAt");
+    const fallbackTimestamp = new Date().toISOString();
+    const lastVisitedAt = source["lastVisitedAt"];
+
+    const tags = Array.isArray(source["tags"])
+      ? (source["tags"] as unknown[]).filter(
+          (tag): tag is string => typeof tag === "string"
+        )
+      : [];
+
+    result.push({
+      id,
+      name,
+      location: readString(source, "location"),
+      latitude,
+      longitude,
+      category: isValidCategory(category) ? category : "Other",
+      tags,
+      noteMustOrder: readString(source, "noteMustOrder"),
+      noteAvoid: readString(source, "noteAvoid"),
+      noteGeneral: readString(source, "noteGeneral"),
+      extraFields: readStringRecord(source, "extraFields"),
+      sourceUrl: readString(source, "sourceUrl"),
+      createdAt: createdAt || fallbackTimestamp,
+      updatedAt: updatedAt || createdAt || fallbackTimestamp,
+      lastVisitedAt: typeof lastVisitedAt === "string" ? lastVisitedAt : null,
+    });
+  }
+
+  return result;
+}

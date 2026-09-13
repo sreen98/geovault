@@ -40,6 +40,9 @@ export function seedDatabase(): number {
 
 export function clearAllPlaces(): void {
   const db = getDatabase();
+  // Deleting places cascades into collection_places; collections are cleared
+  // explicitly so the dev reset leaves nothing behind.
   db.execSync("DELETE FROM places");
+  db.execSync("DELETE FROM collections");
   db.execSync("INSERT INTO places_fts(places_fts) VALUES('rebuild')");
 }

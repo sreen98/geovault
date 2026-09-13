@@ -1,6 +1,8 @@
 import "../global.css";
 import { defineAutoBackupTask } from "../src/services/auto-backup.service";
 import { Stack } from "expo-router";
+import { StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 // Must be defined at module level before any component renders
 defineAutoBackupTask();
@@ -50,11 +52,21 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <RootLayoutInner />
-    </ThemeProvider>
+    // Required by react-native-gesture-handler, which backs drag-to-reorder
+    // inside collections.
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider>
+        <RootLayoutInner />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
 
 function RootLayoutInner() {
   const { colors, isDark } = useTheme();
@@ -97,6 +109,26 @@ function RootLayoutInner() {
           options={{
             headerShown: true,
             title: "Edit Place",
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="collection/new"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="collection/[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="collection/edit/[id]"
+          options={{
+            headerShown: true,
+            title: "Edit Collection",
             presentation: "modal",
           }}
         />

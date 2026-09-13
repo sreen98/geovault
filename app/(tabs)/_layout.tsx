@@ -108,6 +108,21 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="collections"
+        options={{
+          title: "Collections",
+          tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
+            <TabIcon
+              name={focused ? "albums" : "albums-outline"}
+              color={color}
+              size={24}
+              focused={focused}
+              accentColor={colors.accent}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="add"
         options={{ href: null }}
       />

@@ -7,6 +7,7 @@ import {
   Text,
   StatusBar,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,12 +16,20 @@ import { useSearchStore } from "../stores/search.store";
 import { PlaceCard } from "../components/PlaceCard";
 import { EmptyState } from "../components/EmptyState";
 import { Place } from "../types/place.types";
+import { pluralize } from "../utils/plural";
 import { SPACING, ROUNDNESS } from "../constants/theme";
 import { useTheme } from "../contexts/ThemeContext";
 
 export function SearchScreen() {
-  const { query, results, hasMore, isLoadingMore, setQuery, loadMore } =
-    useSearchStore();
+  const {
+    query,
+    results,
+    collectionResults,
+    hasMore,
+    isLoadingMore,
+    setQuery,
+    loadMore,
+  } = useSearchStore();
   const { colors, isDark } = useTheme();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -53,6 +62,66 @@ export function SearchScreen() {
     ),
     []
   );
+
+  const hasCollectionResults = collectionResults.length > 0;
+
+  // Collections ride along as a header section so the whole result set scrolls
+  // as one list rather than two competing scroll areas.
+  const ListHeader = useCallback(() => {
+    if (!hasCollectionResults) return null;
+
+    return (
+      <View style={styles.collectionSection}>
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceMuted }]}>
+          COLLECTIONS
+        </Text>
+        {collectionResults.map((collection) => (
+          <Pressable
+            key={collection.id}
+            onPress={() => router.push(`/collection/${collection.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open collection ${collection.name}`}
+            style={[
+              styles.collectionRow,
+              {
+                backgroundColor: colors.surfaceCard,
+                borderLeftColor: collection.color,
+              },
+            ]}
+          >
+            <Ionicons
+              name={collection.icon}
+              size={18}
+              color={collection.color}
+            />
+            <View style={styles.collectionText}>
+              <Text
+                style={[styles.collectionName, { color: colors.onSurface }]}
+                numberOfLines={1}
+              >
+                {collection.name}
+              </Text>
+              <Text
+                style={[styles.collectionCount, { color: colors.onSurfaceMuted }]}
+              >
+                {pluralize(collection.placeCount, "place")}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.onSurfaceMuted}
+            />
+          </Pressable>
+        ))}
+        {results.length > 0 ? (
+          <Text style={[styles.sectionLabel, styles.placesLabel, { color: colors.onSurfaceMuted }]}>
+            PLACES
+          </Text>
+        ) : null}
+      </View>
+    );
+  }, [collectionResults, colors, hasCollectionResults, results.length]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
@@ -92,20 +161,29 @@ export function SearchScreen() {
           data={results}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
+          ListHeaderComponent={ListHeader}
           contentContainerStyle={[
             styles.listContent,
-            results.length === 0 && styles.emptyList,
+            results.length === 0 && !hasCollectionResults && styles.emptyList,
           ]}
           ListEmptyComponent={
-            <EmptyState
-              icon="search-outline"
-              title={query ? "No results found" : "Explore your vault"}
-              subtitle={
-                query
-                  ? "Try different keywords or check your spelling."
-                  : "Start typing to find saved locations, your favorite dishes, or places you've avoided."
-              }
-            />
+            hasCollectionResults ? (
+              <Text
+                style={[styles.noPlaces, { color: colors.onSurfaceMuted }]}
+              >
+                No matching places.
+              </Text>
+            ) : (
+              <EmptyState
+                icon="search-outline"
+                title={query ? "No results found" : "Explore your vault"}
+                subtitle={
+                  query
+                    ? "Try different keywords or check your spelling."
+                    : "Start typing to find saved locations, your favorite dishes, or places you've avoided."
+                }
+              />
+            )
           }
           ListFooterComponent={
             isLoadingMore ? (
@@ -173,5 +251,45 @@ const styles = StyleSheet.create({
   },
   loadingMore: {
     paddingVertical: SPACING.lg,
+  },
+  collectionSection: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 1,
+  },
+  placesLabel: {
+    marginTop: SPACING.sm,
+  },
+  collectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    borderRadius: ROUNDNESS.md,
+    borderLeftWidth: 3,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  collectionText: {
+    flex: 1,
+  },
+  collectionName: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  collectionCount: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  noPlaces: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
   },
 });

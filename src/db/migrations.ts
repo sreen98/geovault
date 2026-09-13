@@ -92,3 +92,28 @@ export const MIGRATION_V3_STEPS: string[] = [
   END`,
   `INSERT INTO places_fts(places_fts) VALUES('rebuild')`,
 ];
+
+export const MIGRATION_V4_STEPS: string[] = [
+  `CREATE TABLE IF NOT EXISTS collections (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT '',
+    icon TEXT NOT NULL DEFAULT '',
+    start_date TEXT DEFAULT NULL,
+    end_date TEXT DEFAULT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS collection_places (
+    collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    place_id TEXT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL DEFAULT 0,
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (collection_id, place_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_collection_places_place
+    ON collection_places(place_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_collection_places_order
+    ON collection_places(collection_id, position)`,
+];

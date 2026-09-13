@@ -2,6 +2,7 @@ import { GoogleAuthService } from "./google-auth.service";
 import { GoogleDriveService } from "./google-drive.service";
 import { buildExportJson, parseImportFile } from "./export.service";
 import { PlacesRepository } from "../db/places.repository";
+import { restoreAppend, restoreOverwrite } from "../db/restore.repository";
 import { BackupInfo } from "../types/backup.types";
 
 async function getTokenWithRetry(): Promise<string> {
@@ -49,8 +50,8 @@ export const BackupService = {
     );
     let placeCount = 0;
     try {
-      const places = parseImportFile(content);
-      placeCount = places.length;
+      const payload = parseImportFile(content);
+      placeCount = payload.places.length;
     } catch (_error: unknown) {
       // Corrupted file, still return metadata
     }
@@ -65,7 +66,7 @@ export const BackupService = {
 
   async performRestore(
     mode: "overwrite" | "append"
-  ): Promise<{ placeCount: number }> {
+  ): Promise<{ placeCount: number; collectionCount: number }> {
     const accessToken = await getTokenWithRetry();
     const files = await GoogleDriveService.listBackups(accessToken);
 
@@ -77,14 +78,10 @@ export const BackupService = {
       accessToken,
       files[0].id
     );
-    const places = parseImportFile(content);
+    const payload = parseImportFile(content);
 
-    if (mode === "overwrite") {
-      PlacesRepository.importAll(places);
-      return { placeCount: places.length };
-    } else {
-      const added = PlacesRepository.appendAll(places);
-      return { placeCount: added };
-    }
+    return mode === "overwrite"
+      ? restoreOverwrite(payload)
+      : restoreAppend(payload);
   },
 };

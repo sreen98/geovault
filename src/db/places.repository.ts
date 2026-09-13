@@ -246,76 +246,90 @@ export const PlacesRepository = {
       .map(rowToPlace);
   },
 
-  importAll(places: Place[]): void {
+  /**
+   * Inserts a place preserving its id and timestamps. Used by restore;
+   * deliberately transaction-free so the caller can wrap the whole restore.
+   */
+  insertWithId(place: Place): void {
     const db = getDatabase();
-    db.execSync("DELETE FROM places");
-
-    for (const place of places) {
-      db.runSync(
-        `INSERT INTO places (id, name, location, latitude, longitude, category, tags, note_must_order, note_avoid, note_general, extra_fields, source_url, created_at, updated_at, last_visited_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          place.id,
-          place.name,
-          place.location ?? "",
-          place.latitude,
-          place.longitude,
-          place.category,
-          JSON.stringify(place.tags),
-          place.noteMustOrder,
-          place.noteAvoid,
-          place.noteGeneral,
-          JSON.stringify(place.extraFields ?? {}),
-          place.sourceUrl,
-          place.createdAt,
-          place.updatedAt,
-          place.lastVisitedAt,
-        ]
-      );
-    }
-
-    db.execSync("INSERT INTO places_fts(places_fts) VALUES('rebuild')");
+    db.runSync(
+      `INSERT INTO places (id, name, location, latitude, longitude, category, tags, note_must_order, note_avoid, note_general, extra_fields, source_url, created_at, updated_at, last_visited_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        place.id,
+        place.name,
+        place.location ?? "",
+        place.latitude,
+        place.longitude,
+        place.category,
+        JSON.stringify(place.tags),
+        place.noteMustOrder,
+        place.noteAvoid,
+        place.noteGeneral,
+        JSON.stringify(place.extraFields ?? {}),
+        place.sourceUrl,
+        place.createdAt,
+        place.updatedAt,
+        place.lastVisitedAt,
+      ]
+    );
   },
 
-  appendAll(places: Place[]): number {
+  exists(id: string): boolean {
     const db = getDatabase();
-    let added = 0;
+    const row = db.getFirstSync<{ id: string }>(
+      "SELECT id FROM places WHERE id = ?",
+      [id]
+    );
+    return !!row;
+  },
 
-    for (const place of places) {
-      const existing = db.getFirstSync<{ id: string }>(
-        "SELECT id FROM places WHERE id = ?",
-        [place.id]
-      );
-      if (existing) continue;
+  /**
+   * Places that are not yet in the given collection, optionally narrowed by a
+   * search term. Backs the "add places" picker, so already-added places simply
+   * do not appear.
+   */
+  getAddableToCollection(
+    collectionId: string,
+    query: string,
+    limit: number,
+    offset: number
+  ): Place[] {
+    const db = getDatabase();
+    const notMember = `NOT EXISTS (
+      SELECT 1 FROM collection_places cp
+      WHERE cp.collection_id = ? AND cp.place_id = p.id
+    )`;
 
-      db.runSync(
-        `INSERT INTO places (id, name, location, latitude, longitude, category, tags, note_must_order, note_avoid, note_general, extra_fields, source_url, created_at, updated_at, last_visited_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          place.id,
-          place.name,
-          place.location ?? "",
-          place.latitude,
-          place.longitude,
-          place.category,
-          JSON.stringify(place.tags),
-          place.noteMustOrder,
-          place.noteAvoid,
-          place.noteGeneral,
-          JSON.stringify(place.extraFields ?? {}),
-          place.sourceUrl,
-          place.createdAt,
-          place.updatedAt,
-          place.lastVisitedAt,
-        ]
-      );
-      added++;
+    const sanitized = query.replace(/['"]/g, "").trim();
+
+    if (!sanitized) {
+      return db
+        .getAllSync<PlaceRow>(
+          `SELECT p.* FROM places p
+           WHERE ${notMember}
+           ORDER BY p.created_at DESC
+           LIMIT ? OFFSET ?`,
+          [collectionId, limit, offset]
+        )
+        .map(rowToPlace);
     }
 
-    if (added > 0) {
-      db.execSync("INSERT INTO places_fts(places_fts) VALUES('rebuild')");
-    }
-    return added;
+    const ftsQuery = sanitized
+      .split(/\s+/)
+      .map((word) => `"${word}"*`)
+      .join(" ");
+
+    return db
+      .getAllSync<PlaceRow>(
+        `SELECT p.* FROM places p
+         INNER JOIN places_fts fts ON p.rowid = fts.rowid
+         WHERE places_fts MATCH ? AND ${notMember}
+         ORDER BY rank
+         LIMIT ? OFFSET ?`,
+        [ftsQuery, collectionId, limit, offset]
+      )
+      .map(rowToPlace);
   },
 
   getCount(): number {
