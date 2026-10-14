@@ -17,10 +17,12 @@ import { usePlacesStore } from "../stores/places.store";
 import { PlaceCard } from "../components/PlaceCard";
 import { EmptyState } from "../components/EmptyState";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { FAB } from "../components/FAB";
 import { useTheme } from "../contexts/ThemeContext";
 import { Place } from "../types/place.types";
-import { CATEGORIES } from "../constants/categories";
+import { CATEGORIES, CATEGORY_ICONS } from "../constants/categories";
 import { CATEGORY_COLORS, SPACING, ROUNDNESS } from "../constants/theme";
+import { pluralize } from "../utils/plural";
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -28,6 +30,7 @@ export function HomeScreen() {
   const {
     places,
     activeCategory,
+    totalCount,
     hasMore,
     isLoadingMore,
     loadPlaces,
@@ -46,6 +49,10 @@ export function HomeScreen() {
 
   const handlePress = useCallback((place: Place): void => {
     router.push(`/place/${place.id}`);
+  }, []);
+
+  const handleAdd = useCallback((): void => {
+    router.push("/place/new");
   }, []);
 
   const [deleteTarget, setDeleteTarget] = useState<Place | null>(null);
@@ -84,55 +91,69 @@ export function HomeScreen() {
   );
 
   const hasPlaces = places.length > 0;
+  // A filter that matches nothing is not an empty vault — keep the chips on
+  // screen so the user can clear it.
+  const isVaultEmpty = !hasPlaces && !activeCategory;
 
   const ListHeader = useCallback(() => (
     <View style={styles.headerContent}>
       <Text style={[styles.appTitle, { color: colors.onSurface }]}>GeoVault</Text>
+      <Text style={[styles.headerCount, { color: colors.onSurfaceMuted }]}>
+        {activeCategory
+          ? `${pluralize(totalCount, "place")} in ${activeCategory}`
+          : pluralize(totalCount, "place")}
+      </Text>
 
-      {hasPlaces && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-          style={styles.filterScroll}
-        >
-          {filterOptions.map((filter) => {
-            const isActive = filter === "All Places" ? !activeCategory : activeCategory === filter;
-            const chipColor = filter === "All Places"
-              ? colors.primary
-              : CATEGORY_COLORS[filter as keyof typeof CATEGORY_COLORS] ?? colors.primary;
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        {filterOptions.map((filter) => {
+          const isAll = filter === "All Places";
+          const isActive = isAll ? !activeCategory : activeCategory === filter;
+          const category = isAll ? null : CATEGORIES.find((c) => c === filter) ?? null;
+          const chipColor = category ? CATEGORY_COLORS[category] : colors.accent;
+          const chipIcon = category ? CATEGORY_ICONS[category] : "apps-outline";
 
-            return (
-              <Pressable
-                key={filter}
-                onPress={() => handleFilterPress(filter)}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter by ${filter}`}
-                accessibilityState={{ selected: isActive }}
+          // Active chips use a soft tint of their colour rather than a solid fill,
+          // so nine category colours never compete with the content below.
+          return (
+            <Pressable
+              key={filter}
+              onPress={() => handleFilterPress(filter)}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${filter}`}
+              accessibilityState={{ selected: isActive }}
+              style={[
+                styles.filterChip,
+                isActive
+                  ? { backgroundColor: `${chipColor}26`, borderColor: chipColor }
+                  : { backgroundColor: "transparent", borderColor: colors.border },
+              ]}
+            >
+              <Ionicons
+                name={chipIcon}
+                size={16}
+                color={isActive ? chipColor : colors.onSurfaceMuted}
+              />
+              <Text
                 style={[
-                  styles.filterChip,
-                  isActive
-                    ? { backgroundColor: chipColor }
-                    : { backgroundColor: "transparent", borderColor: colors.border, borderWidth: 1 },
+                  styles.filterChipText,
+                  { color: isActive ? chipColor : colors.onSurfaceVariant },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    { color: isActive ? colors.white : colors.onSurfaceVariant },
-                  ]}
-                >
-                  {filter}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
+                {filter}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
-  ), [colors, filterOptions, activeCategory, handleFilterPress, hasPlaces]);
+  ), [colors, filterOptions, activeCategory, handleFilterPress, totalCount]);
 
-  if (!hasPlaces) {
+  if (isVaultEmpty) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
@@ -145,22 +166,14 @@ export function HomeScreen() {
               Your curated selection of{"\n"}discoveries and hidden gems.
             </Text>
           </View>
-          <View style={styles.emptyCenter}>
-            <Ionicons name="location-outline" size={48} color={colors.onSurfaceMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>No places yet</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.onSurfaceMuted }]}>
-              Tap the + button to save your first location.
-            </Text>
-          </View>
+          <EmptyState
+            icon="location-outline"
+            title="No places yet"
+            subtitle="Paste a Google or Apple Maps link, or drop a pin where you stand."
+            actionLabel="Save your first place"
+            onAction={handleAdd}
+          />
         </View>
-        <Pressable
-          onPress={() => router.push("/place/new")}
-          accessibilityRole="button"
-          accessibilityLabel="Add new place"
-          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center z-10"
-        >
-          <Ionicons name="add" size={28} color={colors.background} />
-        </Pressable>
       </View>
     );
   }
@@ -175,6 +188,23 @@ export function HomeScreen() {
         renderItem={renderItem}
         style={styles.flatList}
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.filterEmpty}>
+            <Text style={[styles.filterEmptyText, { color: colors.onSurfaceVariant }]}>
+              No {activeCategory} places saved yet.
+            </Text>
+            <Pressable
+              onPress={() => setCategory(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Show all places"
+              hitSlop={8}
+            >
+              <Text style={[styles.filterEmptyAction, { color: colors.accent }]}>
+                Show all places
+              </Text>
+            </Pressable>
+          </View>
+        }
         ListFooterComponent={
           isLoadingMore ? (
             <ActivityIndicator
@@ -192,14 +222,7 @@ export function HomeScreen() {
         windowSize={10}
         initialNumToRender={15}
       />
-      <Pressable
-        onPress={() => router.push("/place/new")}
-        accessibilityRole="button"
-        accessibilityLabel="Add new place"
-        className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center z-10"
-      >
-        <Ionicons name="add" size={28} color={colors.background} />
-      </Pressable>
+      <FAB onPress={handleAdd} />
       <ConfirmDialog
         visible={deleteTarget !== null}
         title="Delete Place"
@@ -229,44 +252,51 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_700Bold",
     letterSpacing: -0.8,
     paddingHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
+  },
+  headerCount: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.xs,
   },
   filterScroll: {
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
   },
   filterRow: {
     paddingHorizontal: SPACING.lg,
     gap: SPACING.sm,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs + 2,
+    paddingHorizontal: SPACING.md,
+    height: 36,
     borderRadius: ROUNDNESS.full,
+    borderWidth: 1,
   },
   filterChipText: {
-    fontSize: 13,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  filterEmpty: {
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingVertical: SPACING.xxl,
+    paddingHorizontal: SPACING.lg,
+  },
+  filterEmptyText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
+  filterEmptyAction: {
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
   emptyScreen: {
     flex: 1,
     paddingTop: SPACING.lg,
-  },
-  emptyCenter: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    marginBottom: SPACING.xxl * 2,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: "Manrope_700Bold",
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    paddingHorizontal: SPACING.xl,
   },
   heroSection: {
     paddingHorizontal: SPACING.lg,

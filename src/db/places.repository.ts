@@ -68,6 +68,16 @@ export const PlacesRepository = {
     return db.getAllSync<PlaceRow>(query, params).map(rowToPlace);
   },
 
+  /** Place count per category, for categories that have at least one place. */
+  getCategoryCounts(): { category: string; count: number }[] {
+    const db = getDatabase();
+    return db.getAllSync<{ category: string; count: number }>(
+      `SELECT category, COUNT(*) as count FROM places
+       GROUP BY category
+       ORDER BY count DESC`
+    );
+  },
+
   getFilteredCount(filters?: { category?: string }): number {
     const db = getDatabase();
     const conditions: string[] = [];

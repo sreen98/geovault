@@ -1,6 +1,7 @@
 import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, ROUNDNESS, SPACING } from "../constants/theme";
+import { ROUNDNESS, SPACING } from "../constants/theme";
+import { useTheme } from "../contexts/ThemeContext";
 
 interface FABProps {
   onPress: () => void;
@@ -9,18 +10,30 @@ interface FABProps {
 }
 
 export function FAB({ onPress, label = "Add new place", icon = "add" }: FABProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={label}
+        hitSlop={8}
         style={({ pressed }) => [
           styles.button,
+          {
+            backgroundColor: colors.accent,
+            // Shadow tinted with the button's own colour so it reads as a glow,
+            // not a grey smudge, on both themes.
+            ...Platform.select({
+              ios: { shadowColor: colors.accent },
+              default: {},
+            }),
+          },
           pressed && styles.pressed,
         ]}
       >
-        <Ionicons name={icon} size={28} color={COLORS.background} />
+        <Ionicons name={icon} size={28} color={colors.background} />
       </Pressable>
     </View>
   );
@@ -32,24 +45,22 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "flex-end",
     padding: SPACING.lg,
-    zIndex: 999,
+    zIndex: 10,
   },
   button: {
     width: 56,
     height: 56,
     borderRadius: ROUNDNESS.full,
-    backgroundColor: COLORS.accent,
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
       ios: {
-        shadowColor: COLORS.accent,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
       },
       android: {
-        elevation: 12,
+        elevation: 8,
       },
     }),
   },

@@ -21,7 +21,7 @@ import { CollectionPickerDialog } from "../components/CollectionPickerDialog";
 import { usePlacesStore } from "../stores/places.store";
 import { formatDateTime } from "../utils/date";
 import { CATEGORY_COLORS, SPACING, ROUNDNESS } from "../constants/theme";
-import { CATEGORY_FIELDS } from "../constants/categories";
+import { CATEGORY_FIELDS, CATEGORY_ICONS } from "../constants/categories";
 import { useTheme } from "../contexts/ThemeContext";
 
 export function PlaceDetailScreen() {
@@ -69,15 +69,25 @@ export function PlaceDetailScreen() {
   if (!place) {
     return (
       <View style={[styles.empty, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.onSurfaceVariant, fontFamily: "Inter_400Regular" }}>
-          Place not found
+        <Text style={[styles.emptyText, { color: colors.onSurfaceVariant }]}>
+          This place no longer exists.
         </Text>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={8}
+        >
+          <Text style={[styles.emptyAction, { color: colors.accent }]}>Go back</Text>
+        </Pressable>
       </View>
     );
   }
 
   const catColor =
     CATEGORY_COLORS[place.category as PlaceCategory] || CATEGORY_COLORS.Other;
+  const catIcon =
+    CATEGORY_ICONS[place.category as PlaceCategory] || CATEGORY_ICONS.Other;
   const isFoodCategory = place.category === "Dining" || place.category === "Cafe";
   const categoryFields = CATEGORY_FIELDS[place.category] ?? [];
   const filledExtra = categoryFields.filter((f) => place.extraFields[f.key]?.trim());
@@ -86,38 +96,53 @@ export function PlaceDetailScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      <View style={[styles.topBar, { paddingTop: insets.top + SPACING.md }]}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
-            {place.name}
-          </Text>
-          <Pressable
-            onPress={() => router.push(`/place/edit/${place.id}`)}
-            accessibilityRole="button"
-            accessibilityLabel="Edit place"
-            hitSlop={12}
-          >
-            <Ionicons name="create-outline" size={26} color={colors.onSurface} />
-          </Pressable>
-        </View>
-        {place.location ? (
-          <View style={styles.locRow}>
-            <Ionicons name="location" size={14} color={catColor} />
-            <Text style={[styles.locText, { color: colors.onSurfaceVariant }]}>
-              {place.location}
-            </Text>
-          </View>
-        ) : null}
+      <View style={[styles.topBar, { paddingTop: insets.top + SPACING.sm }]}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={12}
+          style={styles.navButton}
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.onSurface} />
+        </Pressable>
+        <Pressable
+          onPress={() => router.push(`/place/edit/${place.id}`)}
+          accessibilityRole="button"
+          accessibilityLabel="Edit place"
+          hitSlop={12}
+          style={styles.navButton}
+        >
+          <Ionicons name="create-outline" size={24} color={colors.onSurface} />
+        </Pressable>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 112 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Category */}
-        <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.onSurfaceMuted }]}>Category</Text>
-          <Text style={[styles.value, { color: catColor }]}>{place.category}</Text>
+        {/* Title block */}
+        <View style={styles.titleBlock}>
+          <View
+            style={[styles.categoryPill, { backgroundColor: `${catColor}26` }]}
+            accessibilityLabel={`Category: ${place.category}`}
+          >
+            <Ionicons name={catIcon} size={14} color={catColor} />
+            <Text style={[styles.categoryPillText, { color: catColor }]}>
+              {place.category}
+            </Text>
+          </View>
+          <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={3}>
+            {place.name}
+          </Text>
+          {place.location ? (
+            <View style={styles.locRow}>
+              <Ionicons name="location-outline" size={16} color={colors.onSurfaceMuted} />
+              <Text style={[styles.locText, { color: colors.onSurfaceVariant }]}>
+                {place.location}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <View style={[styles.sep, { backgroundColor: colors.surfaceContainerHigh }]} />
 
@@ -184,20 +209,6 @@ export function PlaceDetailScreen() {
             <View style={[styles.sep, { backgroundColor: colors.surfaceContainerHigh }]} />
           </>
         ) : null}
-
-        {/* Map */}
-        <View style={styles.block}>
-          <Pressable
-            onPress={openInMaps}
-            accessibilityRole="link"
-            accessibilityLabel="Open in Maps"
-            style={[styles.mapBtn, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="navigate" size={20} color="#FFFFFF" />
-            <Text style={styles.mapBtnText}>Open in Maps</Text>
-          </Pressable>
-        </View>
-        <View style={[styles.sep, { backgroundColor: colors.surfaceContainerHigh }]} />
 
         {/* Coordinates */}
         <View style={styles.row}>
@@ -307,6 +318,32 @@ export function PlaceDetailScreen() {
         </View>
       </ScrollView>
 
+      {/* Primary action pinned to the thumb zone */}
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: Math.max(insets.bottom, SPACING.md),
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
+        <Pressable
+          onPress={openInMaps}
+          accessibilityRole="link"
+          accessibilityLabel={`Open ${place.name} in Maps`}
+          style={({ pressed }) => [
+            styles.mapBtn,
+            { backgroundColor: colors.accent },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="navigate" size={20} color={colors.background} />
+          <Text style={[styles.mapBtnText, { color: colors.background }]}>Open in Maps</Text>
+        </Pressable>
+      </View>
+
       <CollectionPickerDialog
         visible={showCollectionPicker}
         placeId={place.id}
@@ -331,40 +368,80 @@ export function PlaceDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  empty: { flex: 1, justifyContent: "center", alignItems: "center" },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", gap: SPACING.md },
+  emptyText: {
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+  },
+  emptyAction: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
 
   topBar: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
-  titleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: SPACING.md,
-    marginBottom: 4,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xs,
+  },
+  navButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleBlock: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: SPACING.xs + 2,
+    paddingHorizontal: SPACING.sm + SPACING.xs,
+    height: 28,
+    borderRadius: ROUNDNESS.full,
+  },
+  categoryPillText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
   },
   name: {
     fontSize: 32,
     fontFamily: "Manrope_700Bold",
     letterSpacing: -0.8,
-    flex: 1,
+    lineHeight: 38,
   },
   locRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 5,
-    marginTop: 2,
+    gap: SPACING.xs + 2,
   },
   locText: {
     fontSize: 16,
     fontFamily: "Inter_400Regular",
+    lineHeight: 22,
     flex: 1,
   },
 
   scroll: {
     paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xxl,
+  },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  pressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
 
   /* Shared section primitives */
@@ -427,18 +504,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING.sm,
-    paddingVertical: 14,
-    borderRadius: ROUNDNESS.md,
+    height: 52,
+    borderRadius: ROUNDNESS.lg,
   },
   mapBtnText: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
   },
   coords: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     textAlign: "right",
+    fontVariant: ["tabular-nums"],
   },
   tagWrap: {
     flexDirection: "row",

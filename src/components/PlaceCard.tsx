@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Place, PlaceCategory } from "../types/place.types";
 import { CATEGORY_COLORS, ROUNDNESS, SPACING } from "../constants/theme";
+import { CATEGORY_ICONS } from "../constants/categories";
 import { formatRelativeDate } from "../utils/date";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -21,6 +22,7 @@ interface PlaceCardProps {
 }
 
 const SWIPE_THRESHOLD = -80;
+const CARD_GAP = SPACING.sm + SPACING.xs;
 
 export const PlaceCard = React.memo(function PlaceCard({ place, onPress, onDelete }: PlaceCardProps) {
   const { colors } = useTheme();
@@ -61,6 +63,8 @@ export const PlaceCard = React.memo(function PlaceCard({ place, onPress, onDelet
 
   const categoryColor =
     CATEGORY_COLORS[place.category as PlaceCategory] || CATEGORY_COLORS.Other;
+  const categoryIcon =
+    CATEGORY_ICONS[place.category as PlaceCategory] || CATEGORY_ICONS.Other;
 
   const openInMaps = (): void => {
     if (place.sourceUrl) {
@@ -87,23 +91,18 @@ export const PlaceCard = React.memo(function PlaceCard({ place, onPress, onDelet
         style={{ transform: [{ translateX }] }}
         {...panResponder.panHandlers}
       >
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.surfaceCard,
-              borderLeftColor: categoryColor,
-            },
-          ]}
-        >
-          <View style={styles.cardBody}>
-            {/* Left: info */}
-            <Pressable
-              onPress={onPress}
-              accessibilityRole="button"
-              accessibilityLabel={`${place.name}, ${place.category}`}
-              style={[styles.leftSection]}
-            >
+        <View style={[styles.card, { backgroundColor: colors.surfaceCard }]}>
+          {/* Left: category badge + info */}
+          <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityLabel={`${place.name}, ${place.category}`}
+            style={styles.leftSection}
+          >
+            <View style={[styles.categoryBadge, { backgroundColor: `${categoryColor}26` }]}>
+              <Ionicons name={categoryIcon} size={20} color={categoryColor} />
+            </View>
+            <View style={styles.textBlock}>
               <Text
                 style={[styles.name, { color: colors.onSurface }]}
                 numberOfLines={1}
@@ -111,51 +110,34 @@ export const PlaceCard = React.memo(function PlaceCard({ place, onPress, onDelet
                 {place.name}
               </Text>
               {place.location ? (
-                <View style={styles.infoItem}>
-                  <Ionicons name="location" size={13} color={categoryColor} />
-                  <Text
-                    style={[styles.infoText, { color: colors.onSurfaceVariant }]}
-                    numberOfLines={1}
-                  >
-                    {place.location}
-                  </Text>
-                </View>
-              ) : null}
-              <View style={styles.infoItem}>
-                <Ionicons
-                  name="time-outline"
-                  size={12}
-                  color={colors.onSurfaceMuted}
-                />
                 <Text
-                  style={[styles.dateText, { color: colors.onSurfaceMuted }]}
+                  style={[styles.infoText, { color: colors.onSurfaceVariant }]}
+                  numberOfLines={1}
                 >
-                  {formatRelativeDate(place.createdAt).toUpperCase()}
+                  {place.location}
                 </Text>
-              </View>
-            </Pressable>
-
-            {/* Vertical separator */}
-            <View
-              style={[
-                styles.vertSep,
-                { backgroundColor: colors.surfaceContainerHigh },
-              ]}
-            />
-
-            {/* Right: map CTA */}
-            <Pressable
-              onPress={openInMaps}
-              accessibilityRole="link"
-              accessibilityLabel="Open in Maps"
-              style={styles.mapCta}
-            >
-              <Ionicons name="navigate" size={22} color={colors.accent} />
-              <Text style={[styles.mapCtaText, { color: colors.onSurfaceMuted }]}>
-                Map
+              ) : null}
+              <Text
+                style={[styles.metaText, { color: colors.onSurfaceMuted }]}
+                numberOfLines={1}
+              >
+                <Text style={{ color: categoryColor }}>{place.category}</Text>
+                {`  ·  ${formatRelativeDate(place.createdAt)}`}
               </Text>
-            </Pressable>
-          </View>
+            </View>
+          </Pressable>
+
+          {/* Right: map CTA */}
+          <Pressable
+            onPress={openInMaps}
+            accessibilityRole="link"
+            accessibilityLabel={`Open ${place.name} in Maps`}
+            style={({ pressed }) => [styles.mapCta, pressed && styles.pressed]}
+          >
+            <View style={[styles.mapCircle, { backgroundColor: colors.accentMuted }]}>
+              <Ionicons name="navigate" size={20} color={colors.accent} />
+            </View>
+          </Pressable>
         </View>
       </Animated.View>
 
@@ -175,80 +157,85 @@ export const PlaceCard = React.memo(function PlaceCard({ place, onPress, onDelet
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
+    paddingBottom: CARD_GAP,
     position: "relative",
   },
   deleteAction: {
     position: "absolute",
     top: 0,
-    bottom: SPACING.md,
+    bottom: CARD_GAP,
     right: SPACING.lg,
     width: 100,
-    borderTopRightRadius: ROUNDNESS.md,
-    borderBottomRightRadius: ROUNDNESS.md,
+    borderTopRightRadius: ROUNDNESS.lg,
+    borderBottomRightRadius: ROUNDNESS.lg,
     justifyContent: "center",
     alignItems: "center",
-    gap: 4,
+    gap: SPACING.xs,
   },
   deleteActionText: {
     color: "#FFFFFF",
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
   deleteTap: {
     position: "absolute",
     top: 0,
-    bottom: SPACING.md,
+    bottom: CARD_GAP,
     right: SPACING.lg,
     width: 100,
   },
   card: {
-    borderRadius: ROUNDNESS.md,
-    borderLeftWidth: 4,
-    overflow: "hidden",
-  },
-  cardBody: {
     flexDirection: "row",
+    alignItems: "center",
+    borderRadius: ROUNDNESS.lg,
+    overflow: "hidden",
   },
   leftSection: {
     flex: 1,
-    padding: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    paddingLeft: SPACING.md,
+  },
+  categoryBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: ROUNDNESS.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textBlock: {
+    flex: 1,
     gap: SPACING.xs,
   },
   name: {
-    fontSize: 22,
+    fontSize: 17,
     fontFamily: "Manrope_700Bold",
     letterSpacing: -0.3,
-    marginBottom: 2,
-  },
-  vertSep: {
-    width: 1,
-  },
-  infoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
   },
   infoText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
-    flex: 1,
   },
-  dateText: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 1,
+  metaText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
   mapCta: {
-    width: 72,
+    width: 64,
+    alignSelf: "stretch",
     justifyContent: "center",
     alignItems: "center",
-    gap: 4,
   },
-  mapCtaText: {
-    fontSize: 9,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+  mapCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: ROUNDNESS.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

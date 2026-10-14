@@ -5,13 +5,13 @@ import {
   FlatList,
   StyleSheet,
   StatusBar,
-  Pressable,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCollectionsStore } from "../stores/collections.store";
 import { CollectionCard } from "../components/CollectionCard";
+import { EmptyState } from "../components/EmptyState";
+import { FAB } from "../components/FAB";
 import { CollectionSummary } from "../types/collection.types";
 import { SPACING } from "../constants/theme";
 import { pluralize } from "../utils/plural";
@@ -57,16 +57,9 @@ export function CollectionsScreen() {
     [colors, collections.length]
   );
 
-  const addButton = (
-    <Pressable
-      onPress={() => router.push("/collection/new")}
-      accessibilityRole="button"
-      accessibilityLabel="Create new collection"
-      className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center z-10"
-    >
-      <Ionicons name="add" size={28} color={colors.background} />
-    </Pressable>
-  );
+  const handleCreate = useCallback((): void => {
+    router.push("/collection/new");
+  }, []);
 
   if (!hasCollections) {
     return (
@@ -94,23 +87,14 @@ export function CollectionsScreen() {
               Club places into a trip, a city,{"\n"}or a list worth keeping.
             </Text>
           </View>
-          <View style={styles.emptyCenter}>
-            <Ionicons
-              name="albums-outline"
-              size={48}
-              color={colors.onSurfaceMuted}
-            />
-            <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>
-              No collections yet
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.onSurfaceMuted }]}
-            >
-              Tap the + button to group your first set of places.
-            </Text>
-          </View>
+          <EmptyState
+            icon="albums-outline"
+            title="No collections yet"
+            subtitle="Plan a trip, map out a city, or keep a shortlist of favourites."
+            actionLabel="Create a collection"
+            onAction={handleCreate}
+          />
         </View>
-        {addButton}
       </View>
     );
   }
@@ -136,7 +120,7 @@ export function CollectionsScreen() {
         windowSize={10}
         initialNumToRender={15}
       />
-      {addButton}
+      <FAB onPress={handleCreate} label="Create new collection" />
     </View>
   );
 }
@@ -169,23 +153,6 @@ const styles = StyleSheet.create({
   emptyScreen: {
     flex: 1,
     paddingTop: SPACING.lg,
-  },
-  emptyCenter: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    marginBottom: SPACING.xxl * 2,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: "Manrope_700Bold",
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    paddingHorizontal: SPACING.xl,
   },
   heroSection: {
     paddingHorizontal: SPACING.lg,
