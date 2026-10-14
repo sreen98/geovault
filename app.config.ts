@@ -1,7 +1,7 @@
 const config = {
   name: "GeoVault",
   slug: "geovault",
-  version: "1.1.0",
+  version: "1.2.0",
   scheme: "geovault",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -23,7 +23,7 @@ const config = {
   },
   android: {
     package: "com.geovault.app",
-    versionCode: 7,
+    versionCode: 8,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
