@@ -132,7 +132,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, onPress, onDelet
             onPress={openInMaps}
             accessibilityRole="link"
             accessibilityLabel={`Open ${place.name} in Maps`}
-            style={({ pressed }) => [styles.mapCta, pressed && styles.pressed]}
+            style={styles.mapCta}
           >
             <View style={[styles.mapCircle, { backgroundColor: colors.accentMuted }]}>
               <Ionicons name="navigate" size={20} color={colors.accent} />
@@ -234,8 +234,5 @@ const styles = StyleSheet.create({
     borderRadius: ROUNDNESS.full,
     alignItems: "center",
     justifyContent: "center",
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

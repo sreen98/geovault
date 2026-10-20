@@ -27,11 +27,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
           onPress={onAction}
           accessibilityRole="button"
           accessibilityLabel={actionLabel}
-          style={({ pressed }) => [
-            styles.action,
-            { backgroundColor: colors.accent },
-            pressed && styles.pressed,
-          ]}
+          style={[styles.action, { backgroundColor: colors.accent }]}
         >
           <Ionicons name="add" size={20} color={colors.background} />
           <Text style={[styles.actionText, { color: colors.background }]}>{actionLabel}</Text>
@@ -81,9 +77,5 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-  },
-  pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
   },
 });

@@ -19,7 +19,9 @@ export function FAB({ onPress, label = "Add new place", icon = "add" }: FABProps
         accessibilityRole="button"
         accessibilityLabel={label}
         hitSlop={8}
-        style={({ pressed }) => [
+        // Plain style array, not a ({ pressed }) function: NativeWind's Pressable
+        // interop drops function styles, which renders the button invisible.
+        style={[
           styles.button,
           {
             backgroundColor: colors.accent,
@@ -30,7 +32,6 @@ export function FAB({ onPress, label = "Add new place", icon = "add" }: FABProps
               default: {},
             }),
           },
-          pressed && styles.pressed,
         ]}
       >
         <Ionicons name={icon} size={28} color={colors.background} />
@@ -63,9 +64,5 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
-  },
-  pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.95 }],
   },
 });

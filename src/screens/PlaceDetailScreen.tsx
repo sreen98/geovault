@@ -333,11 +333,7 @@ export function PlaceDetailScreen() {
           onPress={openInMaps}
           accessibilityRole="link"
           accessibilityLabel={`Open ${place.name} in Maps`}
-          style={({ pressed }) => [
-            styles.mapBtn,
-            { backgroundColor: colors.accent },
-            pressed && styles.pressed,
-          ]}
+          style={[styles.mapBtn, { backgroundColor: colors.accent }]}
         >
           <Ionicons name="navigate" size={20} color={colors.background} />
           <Text style={[styles.mapBtnText, { color: colors.background }]}>Open in Maps</Text>
@@ -438,10 +434,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
   },
 
   /* Shared section primitives */

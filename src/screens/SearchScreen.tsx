@@ -221,7 +221,7 @@ export function SearchScreen() {
                 onPress={() => runSearch(term)}
                 accessibilityRole="button"
                 accessibilityLabel={`Search for ${term}`}
-                style={({ pressed }) => [styles.recentRow, pressed && styles.pressed]}
+                style={styles.recentRow}
               >
                 <Ionicons name="time-outline" size={18} color={colors.onSurfaceMuted} />
                 <Text
@@ -252,10 +252,9 @@ export function SearchScreen() {
                       onPress={() => handleCategoryPress(item.category)}
                       accessibilityRole="button"
                       accessibilityLabel={`Show ${pluralize(item.count, "place")} in ${item.category}`}
-                      style={({ pressed }) => [
+                      style={[
                         styles.tile,
                         { backgroundColor: `${color}1F`, borderColor: `${color}33` },
-                        pressed && styles.pressed,
                       ]}
                     >
                       <Ionicons name={CATEGORY_ICONS[item.category]} size={24} color={color} />
@@ -419,9 +418,6 @@ const styles = StyleSheet.create({
   },
   loadingMore: {
     paddingVertical: SPACING.lg,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   discovery: {
     paddingHorizontal: SPACING.lg,

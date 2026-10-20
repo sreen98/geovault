@@ -68,13 +68,16 @@ export const PlacesRepository = {
     return db.getAllSync<PlaceRow>(query, params).map(rowToPlace);
   },
 
-  /** Place count per category, for categories that have at least one place. */
+  /**
+   * Place count per category, for categories that have at least one place.
+   * Largest first, ties by name, and the catch-all "Other" always last.
+   */
   getCategoryCounts(): { category: string; count: number }[] {
     const db = getDatabase();
     return db.getAllSync<{ category: string; count: number }>(
       `SELECT category, COUNT(*) as count FROM places
        GROUP BY category
-       ORDER BY count DESC`
+       ORDER BY category = 'Other', count DESC, category`
     );
   },
 
