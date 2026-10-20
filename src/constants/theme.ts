@@ -119,4 +119,4 @@ export const ROUNDNESS = {
   full: 9999,
 } as const;
 
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.2.1";
